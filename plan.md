@@ -10,7 +10,7 @@
 
 **Sources:** [Exercise](https://github.com/01-edu/public/blob/master/subjects/java/projects/travel-plan/README.md) · [Audit](https://github.com/01-edu/public/blob/master/subjects/java/projects/travel-plan/audit/README.md). Reviewed on 2026-09-11.
 
-**Starting point:** The repository has no application files. All implementation phases start unchecked.
+**Starting point:** The repository initially had no application files. Phase 1 is now implemented and verified; later phases remain unchecked.
 
 ## Progress rules
 
@@ -25,7 +25,7 @@
 
 ## Phase overview
 
-- [ ] Phase 1 — Architecture, contracts, and runnable project skeleton
+- [x] Phase 1 — Architecture, contracts, and runnable project skeleton
 - [ ] Phase 2 — Containerized databases and local infrastructure
 - [ ] Phase 3 — Jenkins, SonarQube, and PR workflow
 - [ ] Phase 4 — Authentication, authorization, and secure access
@@ -59,7 +59,7 @@
 
 ## Proposed repository layout
 
-Paths below are planned files/directories, not existing implementation. Keep feature code grouped by domain inside each service and mirror it under `src/test/java`.
+This layout includes the implemented Phase 1 foundation and planned infrastructure paths for later phases. Keep feature code grouped by domain inside each service and mirror it under `src/test/java`.
 
 ```text
 plan.md
@@ -100,15 +100,15 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** Root Maven files; each service's `pom.xml`, application entry point, and `src/main/resources/application.yml`; `admin-ui/package.json`; `docs/architecture.md`; `docs/data-model.md`; `docs/api/*.yaml`; `README.md`.
 
-- [ ] Record compatible Java, Spring Boot/Cloud, Node, database, and infrastructure versions; pin dependencies and explain the purpose of each major package.
-- [ ] Define ownership: auth owns credentials/roles/sessions; users owns profiles/travelers; travel owns itineraries; payment owns saved provider references and gateway settings.
-- [ ] Model stable UUID identifiers and references between domains. Document how a user ID relates to credentials, traveler profiles, travel participation, and payment methods.
-- [ ] Define lifecycle rules: user deletion revokes access, removes owned traveler/payment data, and removes travel participation without deleting other users' trips; travel deletion removes owned itinerary records while retaining shared destinations.
-- [ ] Document admin REST contracts for `/api/auth`, `/api/users`, `/api/travelers`, `/api/travels`, `/api/payment-methods`, and `/api/payment-gateways`, including create/read/update/delete routes where applicable.
-- [ ] Define pagination and a consistent error response containing a stable error code, safe message, field errors, and trace ID. Specify `400`, `401`, `403`, `404`, `409`, and dependency-unavailable responses.
-- [ ] Scaffold the Maven parent, independent service modules, gateway, and UI. Give each service its own configuration, health endpoint, and container build context.
-- [ ] Add meaningful starter checks for application startup and gateway route configuration, and document local build commands.
-- [ ] **Completion check:** `./mvnw verify` and the UI production build succeed; service boundaries and create/update/delete contracts can be explained from the documentation.
+- [x] Record compatible Java, Spring Boot/Cloud, Node, database, and infrastructure versions; pin dependencies and explain the purpose of each major package.
+- [x] Define ownership: auth owns credentials/roles/sessions; users owns profiles/travelers; travel owns itineraries; payment owns saved provider references and gateway settings.
+- [x] Model stable UUID identifiers and references between domains. Document how a user ID relates to credentials, traveler profiles, travel participation, and payment methods.
+- [x] Define lifecycle rules: user deletion revokes access, removes owned traveler/payment data, and removes travel participation without deleting other users' trips; travel deletion removes owned itinerary records while retaining shared destinations.
+- [x] Document admin REST contracts for `/api/auth`, `/api/users`, `/api/travelers`, `/api/travels`, `/api/payment-methods`, and `/api/payment-gateways`, including create/read/update/delete routes where applicable.
+- [x] Define pagination and a consistent error response containing a stable error code, safe message, field errors, and trace ID. Specify `400`, `401`, `403`, `404`, `409`, and dependency-unavailable responses.
+- [x] Scaffold the Maven parent, independent service modules, gateway, and UI. Give each service its own configuration, health endpoint, and container build context.
+- [x] Add meaningful starter checks for application startup and gateway route configuration, and document local build commands.
+- [x] **Completion check:** `./mvnw verify` and the UI production build succeed; service boundaries and create/update/delete contracts can be explained from the documentation.
 
 ## Phase 2 — Containerized databases and local infrastructure
 
@@ -355,7 +355,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 ## Completion log
 
-Add a row whenever a phase is completed or reopened. No phase is complete yet.
+Add a row whenever a phase is completed or reopened. Phase completion tracks implementation and verification; PR approval is a separate requirement before merge.
 
 | Phase | Status | Date | PR / commit | Verification commands or evidence | Remaining issues / reopen reason |
 | --- | --- | --- | --- | --- | --- |
+| 1 | Complete | 2026-09-11 | Working tree on `feat/phase-1-foundation`; human PR review pending | Maven verify: 23 passing tests; UI production build; four clean OpenAPI contracts; [verification details](docs/phase-1-verification.md) | Docker image execution unverified because daemon is unavailable; upstream test/runtime warnings recorded in verification notes. |
