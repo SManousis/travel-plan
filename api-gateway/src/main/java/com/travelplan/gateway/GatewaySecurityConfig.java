@@ -1,0 +1,42 @@
+package com.travelplan.gateway;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.WebFilter;
+
+@Configuration
+public class GatewaySecurityConfig {
+    @Bean
+    WebFilter adminTokenFilter(@Value("${security.token-secret:replace-with-at-least-32-random-characters}") String secret) {
+        if (secret.length() < 32) throw new IllegalArgumentException("security.token-secret must contain at least 32 characters");
+        byte[] key = secret.getBytes(StandardCharsets.UTF_8);
+        return (exchange, chain) -> {
+            String path = exchange.getRequest().getPath().value();
+            if (!path.startsWith("/api/") || path.equals("/api/auth/login") || path.equals("/api/auth/refresh")) return chain.filter(exchange);
+            String role = verify(exchange.getRequest().getHeaders().getFirst("Authorization"), key);
+            if (role == null) { exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED); return exchange.getResponse().setComplete(); }
+            if (!"ADMIN".equals(role)) { exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN); return exchange.getResponse().setComplete(); }
+            return chain.filter(exchange);
+        };
+    }
+    private String verify(String header, byte[] key) {
+        try {
+            if (header == null || !header.startsWith("Bearer ")) return null;
+            String[] parts = header.substring(7).split("\\.", -1); Base64.Decoder d = Base64.getUrlDecoder();
+            if (parts.length != 2 || !MessageDigest.isEqual(sign(parts[0], key), d.decode(parts[1]))) return null;
+            String[] values = new String(d.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
+            return values.length == 4 && Long.parseLong(values[2]) > System.currentTimeMillis() / 1000 ? values[1] : null;
+        } catch (RuntimeException e) { return null; }
+    }
+    private byte[] sign(String value, byte[] key) {
+        try { Mac mac = Mac.getInstance("HmacSHA256"); mac.init(new SecretKeySpec(key, "HmacSHA256")); return mac.doFinal(value.getBytes(StandardCharsets.UTF_8)); }
+        catch (Exception e) { throw new IllegalStateException(e); }
+    }
+}

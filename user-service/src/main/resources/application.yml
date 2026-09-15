@@ -4,6 +4,8 @@ spring:
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8082}
+security:
+  token-secret: ${AUTH_TOKEN_SECRET:replace-with-at-least-32-random-characters}
 management:
   server:
     address: ${MANAGEMENT_ADDRESS:127.0.0.1}
