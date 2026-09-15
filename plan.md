@@ -170,6 +170,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `user-service/src/main/java/`; `user-service/src/main/resources/db/migration/`; mirrored unit tests; user/traveler OpenAPI contracts; auth internal lifecycle endpoints.
 
+**Current state:** Basic in-memory user/traveler CRUD and validation are implemented. Auth provisioning, durable deletion orchestration, full endpoint coverage, and the smoke completion check remain.
+
 - [x] Implement paginated list, detail, create, update, and delete endpoints for users and traveler profiles; link each traveler to an existing user.
 - [x] Validate required fields and email format/uniqueness; return `409` for duplicate emails and `404` for missing IDs without leaking sensitive fields.
 - [ ] Coordinate user creation with auth credential provisioning using an idempotent operation ID; handle provisioning failure without leaving an active account with incomplete identity data.
@@ -186,7 +188,9 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `travel-service/src/main/java/`; Neo4j initialization resources; mirrored unit tests; `docs/api/travels.yaml`; `docs/data-model.md`.
 
-- [ ] Model `Travel`, shared `Destination`, and owned itinerary components for destination stops, activities, accommodation, and transport. Preserve stop ordering and related dates.
+**Current state:** The REST contract and an isolated in-memory itinerary graph are implemented and unit-tested. Neo4j transactions, durable persistence, and the end-to-end graph completion check remain.
+
+- [x] Model `Travel`, shared `Destination`, and owned itinerary components for destination stops, activities, accommodation, and transport. Preserve stop ordering and related dates.
 - [x] Implement paginated list, detail, create, update, and delete endpoints for travels and the related admin-managed itinerary resources.
 - [x] Require at least one destination and valid dates; define duration consistently as calendar days including both start and end dates, and validate component dates against the trip period.
 - [x] Store accommodation details and transport mode/departure/arrival information; distinguish an explicitly empty activity list from missing itinerary data.
