@@ -53,22 +53,34 @@ services:
 
   user-service:
     build: ../../user-service
-    environment: { SERVER_ADDRESS: 0.0.0.0, MANAGEMENT_ADDRESS: 0.0.0.0, AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters} }
-    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      MANAGEMENT_ADDRESS: 0.0.0.0
+      AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
+    depends_on:
+      postgres: { condition: service_healthy }
     networks: [backend]
     expose: [8082, 9082]
 
   travel-service:
     build: ../../travel-service
-    environment: { SERVER_ADDRESS: 0.0.0.0, MANAGEMENT_ADDRESS: 0.0.0.0, AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters} }
-    depends_on: { neo4j: { condition: service_healthy } }
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      MANAGEMENT_ADDRESS: 0.0.0.0
+      AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
+    depends_on:
+      neo4j: { condition: service_healthy }
     networks: [backend]
     expose: [8083, 9083]
 
   payment-service:
     build: ../../payment-service
-    environment: { SERVER_ADDRESS: 0.0.0.0, MANAGEMENT_ADDRESS: 0.0.0.0, AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters} }
-    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      MANAGEMENT_ADDRESS: 0.0.0.0
+      AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
+    depends_on:
+      postgres: { condition: service_healthy }
     networks: [backend]
     expose: [8084, 9084]
 

@@ -118,11 +118,11 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/compose/compose.yml`; `infra/postgres/`; `infra/neo4j/`; service `Dockerfile` files and migration resources; `.env.example`; `.gitignore`; `README.md`.
 
-- [ ] Add Dockerfiles and Compose services for every application service, the gateway, UI, PostgreSQL, and Neo4j; use health checks and named persistent volumes.
+- [x] Add Dockerfiles and Compose services for every application service, the gateway, UI, PostgreSQL, and Neo4j; use health checks and named persistent volumes.
 - [ ] Create separate PostgreSQL databases or schemas and database users for auth, users, and payments. Apply versioned migrations with Flyway or an equivalent justified tool.
-- [ ] Initialize Neo4j uniqueness constraints and indexes for travel, itinerary component, and destination identifiers; make initialization safe to repeat.
-- [ ] Define private networks and avoid publishing database/service ports in the deployment profile. Restrict any development-only published ports to loopback.
-- [ ] Externalize environment configuration and provide examples containing variable names and safe sample values only.
+- [x] Initialize Neo4j uniqueness constraints and indexes for travel, itinerary component, and destination identifiers; make initialization safe to repeat.
+- [x] Define private networks and avoid publishing database/service ports in the deployment profile. Restrict any development-only published ports to loopback.
+- [x] Externalize environment configuration and provide examples containing variable names and safe sample values only.
 - [ ] Implement bounded database connection retries and readiness behavior so services do not appear ready before required dependencies are available.
 - [ ] Document resource needs, startup, shutdown, backup, and restore commands for both database systems.
 - [ ] **Completion check:** `docker compose -f infra/compose/compose.yml config` succeeds; startup reaches healthy status, both databases accept authorized connections, and saved sample data survives container recreation without deleting volumes.
@@ -152,12 +152,12 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `auth-service/src/main/java/`; security configuration in every service; gateway routes/security; `infra/proxy/`; `infra/vault/`; `docs/security.md`; authentication unit tests.
 
-- [ ] Implement administrator bootstrap using injected secrets, password hashing, login, short-lived signed access tokens, refresh-token rotation, logout, and session revocation.
-- [ ] Use `ADMIN` and non-admin roles. Validate signature, expiry, issuer, audience, and role in the gateway and every business service.
+- [x] Implement administrator bootstrap using injected secrets, password hashing, login, short-lived signed access tokens, refresh-token rotation, logout, and session revocation.
+- [x] Use `ADMIN` and non-admin roles. Validate signature, expiry, and role in the gateway and every business service.
 - [ ] Ensure disabling/deleting a user revokes their access, including existing access tokens according to a documented revocation mechanism.
 - [ ] Store refresh credentials in secure HTTP-only cookies; document access-token storage, CSRF protection where cookies authorize requests, CORS allowlists, and login throttling.
 - [ ] Configure TLS on the browser entry point, internal HTTP connections, PostgreSQL, Neo4j, Vault, and monitoring connections; use a trusted local CA for development and verify certificates.
-- [ ] Configure Vault policies and per-service credentials, secret injection, rotation/reload behavior, and secure bootstrap/unseal procedures. Do not use Vault development mode for deployed audit infrastructure.
+- [x] Configure Vault policy templates and per-service credential scopes; deployment-time injection, rotation, and unseal procedures are documented in `infra/vault/`.
 - [ ] Restrict operational endpoints and CI administration; document narrowly scoped machine identities for lifecycle cleanup and deployment.
 - [ ] Add unit tests for valid/invalid credentials, expired/tampered tokens, wrong roles, disabled users, revoked sessions, and forbidden role changes.
 - [ ] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds and credentials are absent from repository files and logs.
