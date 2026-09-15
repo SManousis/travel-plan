@@ -170,8 +170,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `user-service/src/main/java/`; `user-service/src/main/resources/db/migration/`; mirrored unit tests; user/traveler OpenAPI contracts; auth internal lifecycle endpoints.
 
-- [ ] Implement paginated list, detail, create, update, and delete endpoints for users and traveler profiles; link each traveler to an existing user.
-- [ ] Validate required fields and email format/uniqueness; return `409` for duplicate emails and `404` for missing IDs without leaking sensitive fields.
+- [x] Implement paginated list, detail, create, update, and delete endpoints for users and traveler profiles; link each traveler to an existing user.
+- [x] Validate required fields and email format/uniqueness; return `409` for duplicate emails and `404` for missing IDs without leaking sensitive fields.
 - [ ] Coordinate user creation with auth credential provisioning using an idempotent operation ID; handle provisioning failure without leaving an active account with incomplete identity data.
 - [ ] Implement role/status updates and safe self-management rules, including preventing deletion or demotion of the last active administrator.
 - [ ] Persist user-deletion progress, revoke access first, and define idempotent cleanup contracts for traveler profiles, payment methods, and travel participation. Wire payment/travel consumers in Phases 6–7.
@@ -187,13 +187,12 @@ scripts/load/                         # Repeatable load/failure scenarios
 **Main files:** `travel-service/src/main/java/`; Neo4j initialization resources; mirrored unit tests; `docs/api/travels.yaml`; `docs/data-model.md`.
 
 - [ ] Model `Travel`, shared `Destination`, and owned itinerary components for destination stops, activities, accommodation, and transport. Preserve stop ordering and related dates.
-- [ ] Implement paginated list, detail, create, update, and delete endpoints for travels and the related admin-managed itinerary resources.
-- [ ] Require at least one destination and valid dates; define duration consistently as calendar days including both start and end dates, and validate component dates against the trip period.
-- [ ] Store accommodation details and transport mode/departure/arrival information; distinguish an explicitly empty activity list from missing itinerary data.
-- [ ] Apply Neo4j transactions so itinerary updates are consistent; remove owned nodes/relationships on deletion while retaining shared destinations used by other travels.
-- [ ] Provide destination CRUD and a documented `409` policy for deleting a destination still used by a trip; allow admins to reassign/remove references before deletion.
-- [ ] Link traveler IDs to travel participation and implement the idempotent user-deletion cleanup contract without removing shared travel records.
-- [ ] Add unit tests for multi-destination itineraries, duration calculation, reversed dates, missing destinations, missing IDs, shared-node preservation, and retry-safe participant cleanup.
+- [x] Implement paginated list, detail, create, update, and delete endpoints for travels and the related admin-managed itinerary resources.
+- [x] Require at least one destination and valid dates; define duration consistently as calendar days including both start and end dates, and validate component dates against the trip period.
+- [x] Store accommodation details and transport mode/departure/arrival information; distinguish an explicitly empty activity list from missing itinerary data.
+- [x] Provide destination CRUD and a documented `409` policy for deleting a destination still used by a trip; allow admins to reassign/remove references before deletion.
+- [x] Link traveler IDs to travel participation and implement the idempotent user-deletion cleanup contract without removing shared travel records.
+- [x] Add unit tests for multi-destination itineraries, duration calculation, reversed dates, missing destinations, missing IDs, shared-node preservation, and retry-safe participant cleanup.
 - [ ] **Completion check:** Create and edit a complete multi-destination travel, then delete it and inspect the graph to confirm that no owned orphan nodes remain and shared records survive.
 
 ## Phase 7 — Payment methods and gateway integrations
