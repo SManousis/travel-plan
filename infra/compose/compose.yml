@@ -60,6 +60,8 @@ services:
       MANAGEMENT_ADDRESS: 0.0.0.0
       SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
+      AUTH_INTERNAL_SERVICE_TOKEN: "${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}"
+      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
       postgres: { condition: service_healthy }
     networks: [backend]

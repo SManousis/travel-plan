@@ -33,7 +33,7 @@ public class AuthSecurityConfig {
         @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
             if (request.getRequestURI().equals("/api/auth/login") || request.getRequestURI().equals("/api/auth/refresh")
-                    || request.getRequestURI().startsWith("/actuator/")) { chain.doFilter(request, response); return; }
+                    || request.getRequestURI().startsWith("/actuator/") || request.getRequestURI().startsWith("/internal/")) { chain.doFilter(request, response); return; }
             String header = request.getHeader("Authorization");
             TokenService.Claims claims = header != null && header.startsWith("Bearer ") ? tokens.verify(header.substring(7)) : null;
             if (claims == null) { response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required"); return; }
