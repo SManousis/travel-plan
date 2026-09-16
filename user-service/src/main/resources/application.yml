@@ -1,6 +1,8 @@
 spring:
   application:
     name: user-service
+  autoconfigure:
+    exclude: org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8082}
@@ -19,3 +21,19 @@ management:
       show-details: never
       probes:
         enabled: true
+---
+spring:
+  config:
+    activate:
+      on-profile: infra
+  autoconfigure:
+    exclude: []
+  datasource:
+    url: ${USERS_DB_URL:jdbc:postgresql://postgres:5432/travel_users}
+    username: ${USERS_DB_USER:users_app}
+    password: ${USERS_DB_PASSWORD:change-me-users}
+    hikari:
+      connection-timeout: 5000
+      initialization-fail-timeout: 30000
+  flyway:
+    locations: classpath:db/migration

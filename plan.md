@@ -119,12 +119,12 @@ scripts/load/                         # Repeatable load/failure scenarios
 **Main files:** `infra/compose/compose.yml`; `infra/postgres/`; `infra/neo4j/`; service `Dockerfile` files and migration resources; `.env.example`; `.gitignore`; `README.md`.
 
 - [x] Add Dockerfiles and Compose services for every application service, the gateway, UI, PostgreSQL, and Neo4j; use health checks and named persistent volumes.
-- [ ] Create separate PostgreSQL databases or schemas and database users for auth, users, and payments. Apply versioned migrations with Flyway or an equivalent justified tool.
+- [x] Create separate PostgreSQL databases or schemas and database users for auth, users, and payments. Apply versioned migrations with Flyway or an equivalent justified tool.
 - [x] Initialize Neo4j uniqueness constraints and indexes for travel, itinerary component, and destination identifiers; make initialization safe to repeat.
 - [x] Define private networks and avoid publishing database/service ports in the deployment profile. Restrict any development-only published ports to loopback.
 - [x] Externalize environment configuration and provide examples containing variable names and safe sample values only.
-- [ ] Implement bounded database connection retries and readiness behavior so services do not appear ready before required dependencies are available.
-- [ ] Document resource needs, startup, shutdown, backup, and restore commands for both database systems.
+- [x] Implement bounded database connection retries and readiness behavior so services do not appear ready before required dependencies are available.
+- [x] Document resource needs, startup, shutdown, backup, and restore commands for both database systems.
 - [ ] **Completion check:** `docker compose -f infra/compose/compose.yml config` succeeds; startup reaches healthy status, both databases accept authorized connections, and saved sample data survives container recreation without deleting volumes.
 
 ## Phase 3 — Jenkins, SonarQube, and PR workflow

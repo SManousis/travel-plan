@@ -43,6 +43,7 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
+      SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin}
@@ -56,6 +57,7 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
+      SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
     depends_on:
       postgres: { condition: service_healthy }
@@ -67,6 +69,7 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
+      SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
     depends_on:
       neo4j: { condition: service_healthy }
@@ -78,6 +81,7 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
+      SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
     depends_on:
       postgres: { condition: service_healthy }

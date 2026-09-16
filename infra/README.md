@@ -10,6 +10,10 @@ docker compose --env-file .env -f infra/compose/compose.yml up --build -d
 docker compose --env-file .env -f infra/compose/compose.yml ps
 ```
 
+The application containers activate Spring's `infra` profile. That profile enables
+Flyway migrations and bounded Hikari connection retries. Running services directly
+without the profile keeps local startup tests independent of the databases.
+
 The Compose file exposes only the UI (`127.0.0.1:5173`) and gateway
 (`127.0.0.1:8080`) to the host. Application services and databases are reachable
 only on the private `backend` network. Named volumes preserve PostgreSQL and Neo4j
