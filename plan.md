@@ -28,7 +28,7 @@
 - [x] Phase 1 — Architecture, contracts, and runnable project skeleton
 - [x] Phase 2 — Containerized databases and local infrastructure
 - [ ] Phase 3 — Jenkins, SonarQube, and PR workflow
-- [ ] Phase 4 — Authentication, authorization, and secure access
+- [x] Phase 4 — Authentication, authorization, and secure access
 - [ ] Phase 5 — User and traveler management
 - [ ] Phase 6 — Travel and itinerary management
 - [ ] Phase 7 — Payment methods and gateway integrations
@@ -161,7 +161,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Configure Vault policy templates and per-service credential scopes; deployment-time injection, rotation, and unseal procedures are documented in `infra/vault/`.
 - [x] Restrict operational endpoints and CI administration to private management/loopback interfaces and document scoped deployment identities.
 - [x] Add unit tests for valid credentials, expired/tampered tokens, and revoked sessions; live gateway/service checks cover wrong-role and unauthenticated denial.
-- [ ] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds and credentials are absent from repository files and logs.
+- [x] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds through the secure HTTPS proxy and credentials are absent from repository files and logs.
 
 ## Phase 5 — User and traveler management
 

@@ -10,3 +10,4 @@
 *.iml
 .worktrees/
 .superpowers/
+infra/tls/certs/
