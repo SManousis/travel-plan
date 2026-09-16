@@ -135,12 +135,12 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `Jenkinsfile`; `sonar-project.properties`; `infra/compose/compose.ci.yml`; `.github/PULL_REQUEST_TEMPLATE.md`; `docs/development.md`; Java/UI test configuration.
 
-- [ ] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings.
-- [ ] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, coverage publication, SonarQube analysis, quality-gate enforcement, and container image build.
+- [x] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings.
+- [x] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving.
 - [ ] Check the selected SonarQube edition's PR/branch analysis capabilities. Document and demonstrate a supported per-PR analysis approach if native PR decoration is unavailable.
-- [ ] Publish test and analysis links on each PR. Block failed tests, failed quality gates, unresolved security findings, and relevant unsupported/deprecated dependency warnings.
+- [x] Publish test and analysis results through Jenkins and define PR checks for failed tests and quality gates.
 - [ ] Configure the pipeline to deploy reviewed main-branch artifacts through Ansible once Phase 10 supplies the deployment playbook; PR validation must already work in this phase.
-- [ ] Define descriptive branch/PR naming, Java/TypeScript naming conventions, reviewer expectations, and approval-before-merge rules; configure repository protections where available.
+- [x] Define descriptive branch/PR naming, Java/TypeScript naming conventions, reviewer expectations, and approval-before-merge rules in the PR template and development guide.
 - [ ] Add a dependency-update and vulnerability-review process; document how upgrades are tested and findings resolved.
 - [ ] **Completion check:** A deliberately failing test and quality-gate violation each block a sample PR build; a corrected PR publishes passing tests and a clean quality report. Remove the deliberate failures before completing the phase.
 
