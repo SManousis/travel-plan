@@ -74,6 +74,7 @@ services:
       MANAGEMENT_ADDRESS: 0.0.0.0
       SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-change-me-neo4j}
     depends_on:
       neo4j: { condition: service_healthy }
     networks: [backend]

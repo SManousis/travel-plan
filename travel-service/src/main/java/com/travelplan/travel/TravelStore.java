@@ -1,10 +1,14 @@
 package com.travelplan.travel;
 import java.time.*; import java.util.*; import java.util.concurrent.ConcurrentHashMap; import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.ObjectProvider; import org.neo4j.driver.Driver;
 @Service public class TravelStore {
+ private final Driver graph;
+ public TravelStore(){graph=null;}
+ public TravelStore(ObjectProvider<Driver> provider){graph=provider.getIfAvailable();}
  private final Map<UUID,TravelDomain.Destination> destinations=new ConcurrentHashMap<>(); private final Map<UUID,TravelDomain.Travel> travels=new ConcurrentHashMap<>();
  public List<TravelDomain.Destination> destinations(){return destinations.values().stream().sorted(Comparator.comparing(TravelDomain.Destination::createdAt)).toList();}
  public TravelDomain.Destination destination(UUID id){var d=destinations.get(id);if(d==null)throw new NotFound();return d;}
- public TravelDomain.Destination createDestination(String n,String c){if(destinations.values().stream().anyMatch(d->d.name().equalsIgnoreCase(n)&&d.country().equalsIgnoreCase(c)))throw new Conflict("DESTINATION_EXISTS");var d=new TravelDomain.Destination(UUID.randomUUID(),n,c,Instant.now());destinations.put(d.id(),d);return d;}
+ public TravelDomain.Destination createDestination(String n,String c){if(destinations.values().stream().anyMatch(d->d.name().equalsIgnoreCase(n)&&d.country().equalsIgnoreCase(c)))throw new Conflict("DESTINATION_EXISTS");var d=new TravelDomain.Destination(UUID.randomUUID(),n,c,Instant.now());destinations.put(d.id(),d);if(graph!=null)graph.session().executeWrite(tx->{tx.run("CREATE (d:Destination {id:$id,name:$name,country:$country})",Map.of("id",d.id().toString(),"name",n,"country",c));return null;});return d;}
  public TravelDomain.Destination updateDestination(UUID id,String n,String c){destination(id);var d=new TravelDomain.Destination(id,n,c,Instant.now());destinations.put(id,d);return d;}
  public void deleteDestination(UUID id){destination(id);if(travels.values().stream().anyMatch(t->t.stops().stream().anyMatch(s->s.destinationId().equals(id))))throw new Conflict("DESTINATION_IN_USE");destinations.remove(id);}
  public List<TravelDomain.Travel> travels(){return travels.values().stream().sorted(Comparator.comparing(TravelDomain.Travel::createdAt)).toList();}
@@ -15,6 +19,6 @@ import java.time.*; import java.util.*; import java.util.concurrent.ConcurrentHa
  private void validate(LocalDate s,LocalDate e,List<TravelDomain.Stop> stops,List<TravelDomain.Activity>a,List<TravelDomain.Accommodation>h,List<TravelDomain.Transport>tr){if(s==null||e==null||e.isBefore(s))throw new Conflict("INVALID_DATES");if(stops==null||stops.isEmpty())throw new Conflict("DESTINATION_REQUIRED");var positions=new HashSet<Integer>();for(var x:stops){destination(x.destinationId());if(x.position()<0||!positions.add(x.position()))throw new Conflict("INVALID_STOP_ORDER");if(x.arrivalDate()!=null&&(x.arrivalDate().isBefore(s)||x.arrivalDate().isAfter(e)))throw new Conflict("STOP_OUTSIDE_TRAVEL");if(x.departureDate()!=null&&(x.departureDate().isBefore(s)||x.departureDate().isAfter(e)))throw new Conflict("STOP_OUTSIDE_TRAVEL");}if(a==null||h==null||tr==null)throw new Conflict("ITINERARY_REQUIRED");}
  public TravelDomain.Travel addParticipant(UUID id,UUID traveler){var t=travel(id);var ids=new HashSet<>(t.travelerIds());ids.add(traveler);var n=new TravelDomain.Travel(t.id(),t.name(),t.startDate(),t.endDate(),t.durationDays(),t.stops(),t.activities(),t.accommodations(),t.transports(),ids,t.createdAt());travels.put(id,n);return n;}
  public void removeParticipant(UUID id,UUID traveler){var t=travel(id);var ids=new HashSet<>(t.travelerIds());ids.remove(traveler);travels.put(id,new TravelDomain.Travel(t.id(),t.name(),t.startDate(),t.endDate(),t.durationDays(),t.stops(),t.activities(),t.accommodations(),t.transports(),ids,t.createdAt()));}
- public void delete(UUID id){travel(id);travels.remove(id);}
+ public void delete(UUID id){travel(id);travels.remove(id);if(graph!=null)graph.session().executeWrite(tx->{tx.run("MATCH (t:Travel {id:$id}) DETACH DELETE t",Map.of("id",id.toString()));return null;});}
  public static class NotFound extends RuntimeException{} public static class Conflict extends RuntimeException{public final String code;public Conflict(String c){code=c;}}
 }
