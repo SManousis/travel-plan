@@ -32,7 +32,7 @@ public class GatewaySecurityConfig {
             String[] parts = header.substring(7).split("\\.", -1); Base64.Decoder d = Base64.getUrlDecoder();
             if (parts.length != 2 || !MessageDigest.isEqual(sign(parts[0], key), d.decode(parts[1]))) return null;
             String[] values = new String(d.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
-            return values.length == 4 && Long.parseLong(values[2]) > System.currentTimeMillis() / 1000 ? values[1] : null;
+            return values.length == 6 && "travel-plan-auth".equals(values[2]) && "travel-plan-admin".equals(values[3]) && Long.parseLong(values[4]) > System.currentTimeMillis() / 1000 ? values[1] : null;
         } catch (RuntimeException e) { return null; }
     }
     private byte[] sign(String value, byte[] key) {

@@ -40,7 +40,7 @@ public class AdminTokenFilter extends OncePerRequestFilter {
             Base64.Decoder d = Base64.getUrlDecoder();
             if (parts.length != 2 || !MessageDigest.isEqual(sign(parts[0]), d.decode(parts[1]))) return null;
             String[] values = new String(d.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
-            if (values.length != 4 || Long.parseLong(values[2]) <= System.currentTimeMillis() / 1000) return null;
+            if (values.length != 6 || !"travel-plan-auth".equals(values[2]) || !"travel-plan-admin".equals(values[3]) || Long.parseLong(values[4]) <= System.currentTimeMillis() / 1000) return null;
             return new Claims(values[0], values[1]);
         } catch (RuntimeException e) { return null; }
     }

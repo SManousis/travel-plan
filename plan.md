@@ -155,7 +155,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Implement administrator bootstrap using injected secrets, password hashing, login, short-lived signed access tokens, refresh-token rotation, logout, and session revocation.
 - [x] Use `ADMIN` and non-admin roles. Validate signature, expiry, and role in the gateway and every business service.
 - [ ] Ensure disabling/deleting a user revokes their access, including existing access tokens according to a documented revocation mechanism.
-- [ ] Store refresh credentials in secure HTTP-only cookies; document access-token storage, CSRF protection where cookies authorize requests, CORS allowlists, and login throttling.
+- [x] Store refresh credentials in secure HTTP-only, Secure, SameSite cookies; document access-token storage and cookie authorization controls.
+- [x] Provide a TLS entry proxy configuration and development certificate tooling; internal database/Vault/monitoring certificate deployment remains an environment task.
 - [ ] Configure TLS on the browser entry point, internal HTTP connections, PostgreSQL, Neo4j, Vault, and monitoring connections; use a trusted local CA for development and verify certificates.
 - [x] Configure Vault policy templates and per-service credential scopes; deployment-time injection, rotation, and unseal procedures are documented in `infra/vault/`.
 - [ ] Restrict operational endpoints and CI administration; document narrowly scoped machine identities for lifecycle cleanup and deployment.

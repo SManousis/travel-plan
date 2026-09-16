@@ -32,7 +32,7 @@ public class TokenService {
 
     public IssuedToken issue(String subject, String role) {
         long expiresAt = Instant.now().plusSeconds(ttlSeconds).getEpochSecond();
-        String payload = subject + "|" + role + "|" + expiresAt + "|" + UUID.randomUUID();
+        String payload = subject + "|" + role + "|travel-plan-auth|travel-plan-admin|" + expiresAt + "|" + UUID.randomUUID();
         String encodedPayload = encoder.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
         return new IssuedToken(encodedPayload + "." + encoder.encodeToString(sign(encodedPayload)), expiresAt);
     }
@@ -44,10 +44,10 @@ public class TokenService {
                 return null;
             }
             String[] values = new String(decoder.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
-            if (values.length != 4) return null;
-            long expiresAt = Long.parseLong(values[2]);
-            if (expiresAt <= Instant.now().getEpochSecond() || revoked.containsKey(values[3])) return null;
-            return new Claims(values[0], values[1], values[3], expiresAt);
+            if (values.length != 6 || !"travel-plan-auth".equals(values[2]) || !"travel-plan-admin".equals(values[3])) return null;
+            long expiresAt = Long.parseLong(values[4]);
+            if (expiresAt <= Instant.now().getEpochSecond() || revoked.containsKey(values[5])) return null;
+            return new Claims(values[0], values[1], values[5], expiresAt);
         } catch (RuntimeException exception) {
             return null;
         }
@@ -63,10 +63,10 @@ public class TokenService {
             String[] parts = token.split("\\.", -1);
             if (parts.length != 2 || !MessageDigest.isEqual(sign(parts[0]), decoder.decode(parts[1]))) return null;
             String[] values = new String(decoder.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
-            if (values.length != 4) return null;
-            long expiresAt = Long.parseLong(values[2]);
+            if (values.length != 6 || !"travel-plan-auth".equals(values[2]) || !"travel-plan-admin".equals(values[3])) return null;
+            long expiresAt = Long.parseLong(values[4]);
             return expiresAt > Instant.now().getEpochSecond()
-                    ? new Claims(values[0], values[1], values[3], expiresAt) : null;
+                    ? new Claims(values[0], values[1], values[5], expiresAt) : null;
         } catch (RuntimeException exception) { return null; }
     }
 

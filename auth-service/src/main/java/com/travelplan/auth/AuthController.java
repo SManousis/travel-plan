@@ -5,6 +5,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,11 +37,14 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestHeader(value = "Authorization", required = false) String authorization) {
+    public ResponseEntity<?> refresh(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                     @CookieValue(value = "travel_plan_refresh", required = false) String refreshCookie) {
+        if (authorization == null && refreshCookie != null) authorization = "Bearer " + refreshCookie;
         TokenService.Claims claims = bearer(authorization);
         if (claims == null || !"ADMIN".equals(claims.role())) return ResponseEntity.status(401).body(new ErrorResponse("UNAUTHENTICATED", "Invalid refresh token"));
         tokens.revoke(authorization.substring("Bearer ".length()));
-        return ResponseEntity.ok(TokenResponse.from(tokens.issue(claims.subject(), claims.role())));
+        TokenResponse response = TokenResponse.from(tokens.issue(claims.subject(), claims.role()));
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshCookie(response.accessToken()).toString()).body(response);
     }
 
     @PostMapping("/logout")
@@ -50,6 +55,7 @@ public class AuthController {
     public TokenService.Claims me(@RequestAttribute("travelPlanClaims") TokenService.Claims claims) { return claims; }
 
     private TokenService.Claims bearer(String value) { return value != null && value.startsWith("Bearer ") ? tokens.verify(value.substring(7)) : null; }
+    private ResponseCookie refreshCookie(String token) { return ResponseCookie.from("travel_plan_refresh", token).httpOnly(true).secure(true).sameSite("Strict").path("/api/auth").maxAge(900).build(); }
     public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
     public record TokenResponse(String accessToken, String tokenType, long expiresAt) { static TokenResponse from(TokenService.IssuedToken t) { return new TokenResponse(t.value(), "Bearer", t.expiresAt()); } }
     public record ErrorResponse(String code, String message) {}
