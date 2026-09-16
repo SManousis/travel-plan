@@ -6,6 +6,9 @@ services:
     volumes: [neo4j-data:/data, neo4j-logs:/logs, ../neo4j/init:/var/lib/neo4j/import/init, ../tls/certs:/var/lib/neo4j/certificates/bolt]
     environment:
       NEO4J_server_bolt_tls__level: REQUIRED
+  travel-service:
+    environment:
+      NEO4J_URI: bolt+ssc://neo4j:7687
   vault:
     image: hashicorp/vault:1.20
     command: ["server", "-config=/vault/config/config.hcl"]

@@ -29,8 +29,8 @@
 - [x] Phase 2 — Containerized databases and local infrastructure
 - [ ] Phase 3 — Jenkins, SonarQube, and PR workflow
 - [x] Phase 4 — Authentication, authorization, and secure access
-- [ ] Phase 5 — User and traveler management
-- [ ] Phase 6 — Travel and itinerary management
+- [x] Phase 5 — User and traveler management
+- [x] Phase 6 — Travel and itinerary management
 - [ ] Phase 7 — Payment methods and gateway integrations
 - [ ] Phase 8 — Responsive Admin Dashboard
 - [ ] Phase 9 — Request tracing and operational visibility
@@ -171,15 +171,15 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `user-service/src/main/java/`; `user-service/src/main/resources/db/migration/`; mirrored unit tests; user/traveler OpenAPI contracts; auth internal lifecycle endpoints.
 
-**Current state:** Basic in-memory user/traveler CRUD and validation are implemented. Auth provisioning, durable deletion orchestration, full endpoint coverage, and the smoke completion check remain.
+**Current state:** Admin CRUD is validated and persisted to PostgreSQL in the infrastructure profile. Deletion revokes access before disabling the account and removes owned travelers; lifecycle checks and repeat-safe operations are covered by tests and smoke verification.
 
 - [x] Implement paginated list, detail, create, update, and delete endpoints for users and traveler profiles; link each traveler to an existing user.
 - [x] Validate required fields and email format/uniqueness; return `409` for duplicate emails and `404` for missing IDs without leaking sensitive fields.
-- [ ] Coordinate user creation with auth credential provisioning using an idempotent operation ID; handle provisioning failure without leaving an active account with incomplete identity data.
-- [ ] Implement role/status updates and safe self-management rules, including preventing deletion or demotion of the last active administrator.
-- [ ] Persist user-deletion progress, revoke access first, and define idempotent cleanup contracts for traveler profiles, payment methods, and travel participation. Wire payment/travel consumers in Phases 6–7.
-- [ ] Add unit tests for CRUD success, duplicate emails, invalid traveler ownership, missing users, last-admin protection, provisioning retries, and deletion retries.
-- [ ] **Completion check:** The user/traveler API smoke scenario completes CRUD as an admin and verifies validation failures, access denial, and repeat-safe lifecycle behavior against currently available services.
+- [x] Coordinate user creation with auth credential provisioning using an idempotent operation ID; handle provisioning failure without leaving an active account with incomplete identity data.
+- [x] Implement role/status updates and safe self-management rules, including preventing deletion or demotion of the last active administrator.
+- [x] Persist user-deletion progress, revoke access first, and define idempotent cleanup contracts for traveler profiles, payment methods, and travel participation. Wire payment/travel consumers in Phases 6–7.
+- [x] Add unit tests for CRUD success, duplicate emails, invalid traveler ownership, missing users, last-admin protection, provisioning retries, and deletion retries.
+- [x] **Completion check:** The user/traveler API smoke scenario completes CRUD as an admin and verifies validation failures, access denial, and repeat-safe lifecycle behavior against currently available services.
 
 ## Phase 6 — Travel and itinerary management
 
@@ -189,7 +189,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `travel-service/src/main/java/`; Neo4j initialization resources; mirrored unit tests; `docs/api/travels.yaml`; `docs/data-model.md`.
 
-**Current state:** The REST contract and an isolated in-memory itinerary graph are implemented and unit-tested. Neo4j transactions, durable persistence, and the end-to-end graph completion check remain.
+**Current state:** Travel and itinerary CRUD validates complete date-bounded itineraries and writes travel and destination nodes through the Neo4j driver in the infrastructure profile; unit and runtime checks cover graph lifecycle behavior.
 
 - [x] Model `Travel`, shared `Destination`, and owned itinerary components for destination stops, activities, accommodation, and transport. Preserve stop ordering and related dates.
 - [x] Implement paginated list, detail, create, update, and delete endpoints for travels and the related admin-managed itinerary resources.
@@ -198,7 +198,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Provide destination CRUD and a documented `409` policy for deleting a destination still used by a trip; allow admins to reassign/remove references before deletion.
 - [x] Link traveler IDs to travel participation and implement the idempotent user-deletion cleanup contract without removing shared travel records.
 - [x] Add unit tests for multi-destination itineraries, duration calculation, reversed dates, missing destinations, missing IDs, shared-node preservation, and retry-safe participant cleanup.
-- [ ] **Completion check:** Create and edit a complete multi-destination travel, then delete it and inspect the graph to confirm that no owned orphan nodes remain and shared records survive.
+- [x] **Completion check:** Create and edit a complete multi-destination travel, then delete it and inspect the graph to confirm that no owned orphan nodes remain and shared records survive.
 
 ## Phase 7 — Payment methods and gateway integrations
 
