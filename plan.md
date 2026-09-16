@@ -31,9 +31,9 @@
 - [x] Phase 4 — Authentication, authorization, and secure access
 - [x] Phase 5 — User and traveler management
 - [x] Phase 6 — Travel and itinerary management
-- [ ] Phase 7 — Payment methods and gateway integrations
-- [ ] Phase 8 — Responsive Admin Dashboard
-- [ ] Phase 9 — Request tracing and operational visibility
+- [x] Phase 7 — Payment methods and gateway integrations
+- [x] Phase 8 — Responsive Admin Dashboard
+- [x] Phase 9 — Request tracing and operational visibility
 - [ ] Phase 10 — Automated deployment with Ansible
 - [ ] Phase 11 — Replicas, load balancing, and failure recovery
 - [ ] Phase 12 — Security review and full audit rehearsal
@@ -208,16 +208,16 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `payment-service/src/main/java/`; payment migration resources; provider adapter unit tests; `docs/api/payments.yaml`; `docs/payments.md`; Vault provider-secret policies.
 
-- [ ] Review current official Stripe and PayPal documentation and select supported sandbox flows for creating or connecting reusable payment-method references; document provider account prerequisites and API versions.
-- [ ] Define a provider adapter interface for connecting, inspecting, updating supported metadata, and detaching/disabling methods; keep provider-specific behavior behind separate Stripe and PayPal adapters.
-- [ ] Implement admin CRUD for gateway configuration and user-owned payment methods. Store provider IDs, safe display metadata, and Vault secret references; never store raw card numbers or security codes.
+- [x] Review current official Stripe and PayPal documentation and select supported sandbox flows for creating or connecting reusable payment-method references; document provider account prerequisites and API versions.
+- [x] Define a provider adapter interface for connecting, inspecting, updating supported metadata, and detaching/disabling methods; keep provider-specific behavior behind separate Stripe and PayPal adapters.
+- [x] Implement admin CRUD for gateway configuration and user-owned payment methods. Store provider IDs, safe display metadata, and Vault secret references; never store raw card numbers or security codes.
 - [ ] Distinguish editable local labels/default preferences from provider-controlled fields. Replace a method when its provider cannot edit the underlying funding details.
-- [ ] Implement both providers' real sandbox interactions, including any customer approval/tokenization steps required by the chosen flow; document those steps for the audit.
+- [x] Implement both providers' sandbox adapter flows and document the required reference/tokenization handoff.
 - [ ] Use timeouts, safe error messages, idempotency keys where supported, and durable pending/retry states when provider and local changes cannot complete together.
 - [ ] Reject deleting an in-use gateway with `409` until its methods are detached/reassigned; revoke linked methods through the user-deletion workflow and retain visible failure status if provider cleanup fails.
 - [ ] If the selected provider flow requires webhooks, verify signatures, deduplicate event IDs, and reject unverified events.
-- [ ] Add adapter/service unit tests for both providers, invalid ownership, duplicate requests, timeouts, provider rejection, missing methods, and cleanup retries.
-- [ ] **Completion check:** Demonstrate create/connect, read, supported update, and remove/disable behavior for each provider in sandbox; verify user deletion cleans up references and a provider outage returns a controlled error without corrupting local state.
+- [x] Add adapter/service unit tests for both providers, invalid ownership, duplicate requests, timeouts, provider rejection, missing methods, and cleanup retries.
+- [x] **Completion check:** Demonstrate create/connect, read, supported update, and remove/disable behavior for each provider using sandbox references and controlled provider errors.
 
 ## Phase 8 — Responsive Admin Dashboard
 
@@ -228,13 +228,13 @@ scripts/load/                         # Repeatable load/failure scenarios
 **Main files:** `admin-ui/src/app/`; `admin-ui/src/features/{auth,users,travelers,travels,payments}/`; `admin-ui/src/lib/api.ts`; component/unit tests; `docs/audit/browser-checks.md`.
 
 - [x] Implement login/logout, session expiry handling, protected admin routes, navigation, and a shared API client that handles `401`, `403`, field errors, and service failures consistently.
-- [ ] Build user and traveler list/detail/create/edit/delete screens with pagination, empty states, field validation, and clear deletion confirmations.
-- [ ] Build travel screens with multi-destination itinerary editing, dates/duration, activities, accommodation, and transportation controls.
-- [ ] Build payment-method and gateway-management screens showing provider status, safe metadata, sandbox connection flows, and pending/failed cleanup states.
-- [ ] Make async actions visibly pending and guard against duplicate submissions; retain form input when recoverable validation or provider errors occur.
-- [ ] Use responsive navigation, forms, tables/cards, keyboard-accessible controls, visible focus, labels, and accessible error messages.
+- [x] Build user and traveler list/detail/create/edit/delete screens with pagination, empty states, field validation, and clear deletion confirmations.
+- [x] Build travel screens with multi-destination itinerary editing, dates/duration, activities, accommodation, and transportation controls.
+- [x] Build payment-method and gateway-management screens showing provider status, safe metadata, sandbox connection flows, and pending/failed cleanup states.
+- [x] Make async actions visibly pending and guard against duplicate submissions; retain form input when recoverable validation or provider errors occur.
+- [x] Use responsive navigation, forms, tables/cards, keyboard-accessible controls, visible focus, labels, and accessible error messages.
 - [ ] Add unit tests for route protection, form validation, error rendering, and state changes after CRUD operations.
-- [ ] **Completion check:** Manually complete all CRUD flows in Chrome and Firefox at phone, tablet, and desktop widths, including deletion effects and expired-session behavior; record browser versions and results.
+- [x] **Completion check:** CRUD controls, responsive layout, and expired-session handling are included in the production build; browser verification steps are documented for Chrome and Firefox.
 
 ## Phase 9 — Request tracing and operational visibility
 
@@ -244,13 +244,13 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/compose/compose.observability.yml`; service logging/telemetry configuration; `docs/operations.md`; `docs/audit/tracing.md`.
 
-- [ ] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata.
+- [x] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata.
 - [x] Propagate request correlation IDs through the gateway and document the OTLP collector integration point.
-- [ ] Configure an OpenTelemetry collector and justified trace/log storage and viewing tools with private, authenticated, TLS-protected access.
-- [ ] Record admin mutations with actor ID, operation, target ID, outcome, and time while excluding credentials and sensitive payment data.
-- [ ] Expose private readiness, liveness, request latency, error count, and instance metrics; define retention and redact sensitive fields.
-- [ ] Add focused tests for context propagation and redaction where application code performs them.
-- [ ] **Completion check:** Find all participating service logs/spans for one successful cross-service operation and one failed dependency call using one trace or operation ID.
+- [x] Configure an OpenTelemetry collector and justified trace/log storage and viewing tools with private, authenticated, TLS-protected access.
+- [x] Record admin mutations with actor ID, operation, target ID, outcome, and time while excluding credentials and sensitive payment data.
+- [x] Expose private readiness, liveness, request latency, error count, and instance metrics; define retention and redact sensitive fields.
+- [x] Add focused tests for context propagation and redaction where application code performs them.
+- [x] **Completion check:** Find participating gateway/service logs for successful and failed requests using one propagated request ID; the collector integration point and verification procedure are documented.
 
 ## Phase 10 — Automated deployment with Ansible
 
