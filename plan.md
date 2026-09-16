@@ -227,7 +227,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `admin-ui/src/app/`; `admin-ui/src/features/{auth,users,travelers,travels,payments}/`; `admin-ui/src/lib/api.ts`; component/unit tests; `docs/audit/browser-checks.md`.
 
-- [ ] Implement login/logout, session expiry handling, protected admin routes, navigation, and a shared API client that handles `401`, `403`, field errors, and service failures consistently.
+- [x] Implement login/logout, session expiry handling, protected admin routes, navigation, and a shared API client that handles `401`, `403`, field errors, and service failures consistently.
 - [ ] Build user and traveler list/detail/create/edit/delete screens with pagination, empty states, field validation, and clear deletion confirmations.
 - [ ] Build travel screens with multi-destination itinerary editing, dates/duration, activities, accommodation, and transportation controls.
 - [ ] Build payment-method and gateway-management screens showing provider status, safe metadata, sandbox connection flows, and pending/failed cleanup states.

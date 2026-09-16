@@ -1,8 +1,12 @@
+import * as React from "react";
+
 type Section = {
   title: string;
   description: string;
   icon: "people" | "route" | "card";
 };
+
+type Resource = { id?: string; email?: string; name?: string; country?: string };
 
 const sections: Section[] = [
   {
@@ -62,6 +66,15 @@ function SectionIcon({ icon }: Pick<Section, "icon">) {
 }
 
 function App() {
+  const [token, setToken] = React.useState(() => sessionStorage.getItem("travelPlanToken"));
+  const [username, setUsername] = React.useState("admin");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [users, setUsers] = React.useState<Resource[]>([]);
+  const [travels, setTravels] = React.useState<Resource[]>([]);
+  async function login(event: React.FormEvent) { event.preventDefault(); setError(""); const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) }); if (!response.ok) { setError("Invalid administrator credentials"); return; } const data = await response.json(); sessionStorage.setItem("travelPlanToken", data.accessToken); setToken(data.accessToken); }
+  React.useEffect(() => { if (!token) return; const headers = { Authorization: `Bearer ${token}` }; Promise.all([fetch("/api/users", { headers }), fetch("/api/travels", { headers })]).then(async ([u, t]) => { if (u.status === 401 || t.status === 401) { sessionStorage.removeItem("travelPlanToken"); setToken(null); return; } setUsers((await u.json()).items ?? []); setTravels((await t.json()).items ?? []); }).catch(() => setError("The administration services are unavailable")); }, [token]);
+  if (!token) return <main className="login-shell"><form className="login-card" onSubmit={login}><p className="eyebrow">Travel Plan Admin</p><h1>Sign in</h1><label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>{error && <p role="alert">{error}</p>}<button type="submit">Sign in securely</button></form></main>;
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -110,6 +123,7 @@ function App() {
               </article>
             ))}
           </div>
+          <div className="data-summary"><h2>Live records</h2><p>{users.length} users · {travels.length} travels</p><button onClick={() => { sessionStorage.removeItem("travelPlanToken"); setToken(null); }}>Sign out</button></div>
         </section>
       </main>
 
