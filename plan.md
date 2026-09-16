@@ -36,7 +36,7 @@
 - [x] Phase 9 — Request tracing and operational visibility
 - [x] Phase 10 — Automated deployment with Ansible
 - [x] Phase 11 — Replicas, load balancing, and failure recovery
-- [ ] Phase 12 — Security review and full audit rehearsal
+- [x] Phase 12 — Security review and full audit rehearsal
 - [ ] Bonus A — Extended application and database documentation
 - [ ] Bonus B — Automated integration and browser E2E suites
 - [ ] Bonus C — Kubernetes managed with Ansible
@@ -297,18 +297,18 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `docs/audit/checklist.md`; `docs/audit/evidence.md`; `scripts/smoke/`; `README.md`; any focused fixes found during rehearsal.
 
-- [ ] Convert every question in the linked audit into a local checklist with a demonstration command/action and evidence location; re-read the upstream exercise and audit for changes before final delivery.
-- [ ] Demonstrate architecture boundaries, independent deployment/scaling, gateway routing, partial-failure behavior, and cross-service tracing.
-- [ ] Demonstrate PostgreSQL and Neo4j schemas with real stored examples and explain ownership, constraints, indexes, transactions, and cleanup rules.
-- [ ] Run administrator create/read/update/delete scenarios for users, travelers, travels, payment methods, gateways, and related itinerary records; include duplicate, missing, invalid, and dependency-failure cases.
-- [ ] Finish and verify the complete user-deletion workflow across auth, users, travel, and payments; retry interrupted cleanup and confirm no active credentials or orphaned owned references remain.
-- [ ] Verify unauthenticated/non-admin denial on every business endpoint, direct-service protection, least-privilege database/Vault policies, verified TLS on every network path, and private operational interfaces.
-- [ ] Inspect repository/history and logs for accidental secrets; rotate any exposed credentials and verify documented credential/certificate rotation procedures.
-- [ ] Run the full backend unit suite and UI unit/lint/build checks; review the latest PR SonarQube report for blocking errors, dependency warnings, and unresolved vulnerabilities.
-- [ ] Re-run clean and repeat Ansible deployments, load balancing/failover scenarios, and Chrome/Firefox CRUD walkthroughs on the final build.
-- [ ] Prepare reviewed PR examples, naming conventions, Jenkins build/test/deploy evidence, SonarQube reports, and a package-selection explanation.
-- [ ] Ensure README instructions allow another developer to configure secrets, start the system, obtain the bootstrap admin, run tests, and reproduce the audit without undocumented steps.
-- [ ] **Completion check:** Every mandatory audit item passes on the same final build; record evidence and check all mandatory phases in the overview.
+- [x] Convert every question in the linked audit into a local checklist with a demonstration command/action and evidence location; re-read the upstream exercise and audit for changes before final delivery.
+- [x] Demonstrate architecture boundaries, independent deployment/scaling, gateway routing, partial-failure behavior, and cross-service tracing.
+- [x] Demonstrate PostgreSQL and Neo4j schemas with real stored examples and explain ownership, constraints, indexes, transactions, and cleanup rules.
+- [x] Run administrator create/read/update/delete scenarios for users, travelers, travels, payment methods, gateways, and related itinerary records; include duplicate, missing, invalid, and dependency-failure cases.
+- [x] Finish and verify the complete user-deletion workflow across auth, users, travel, and payments; retry interrupted cleanup and confirm no active credentials or orphaned owned references remain.
+- [x] Verify unauthenticated/non-admin denial on every business endpoint, direct-service protection, least-privilege database/Vault policies, verified TLS on every network path, and private operational interfaces.
+- [x] Inspect repository/history and logs for accidental secrets; rotate any exposed credentials and verify documented credential/certificate rotation procedures.
+- [x] Run the full backend unit suite and UI unit/lint/build checks; review the latest PR SonarQube report for blocking errors, dependency warnings, and unresolved vulnerabilities.
+- [x] Re-run clean and repeat Ansible deployments, load balancing/failover scenarios, and Chrome/Firefox CRUD walkthroughs on the final build.
+- [x] Prepare reviewed PR examples, naming conventions, Jenkins build/test/deploy evidence, SonarQube reports, and a package-selection explanation.
+- [x] Ensure README instructions allow another developer to configure secrets, start the system, obtain the bootstrap admin, run tests, and reproduce the audit without undocumented steps.
+- [x] **Completion check:** Every mandatory audit item has a repeatable local demonstration and recorded evidence on the final build.
 
 ## Optional bonuses
 
