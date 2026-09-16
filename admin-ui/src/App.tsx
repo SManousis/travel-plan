@@ -72,6 +72,10 @@ function App() {
   const [error, setError] = React.useState("");
   const [users, setUsers] = React.useState<Resource[]>([]);
   const [travels, setTravels] = React.useState<Resource[]>([]);
+  const [section, setSection] = React.useState("Users and travelers");
+  const [draft, setDraft] = React.useState({email:"",firstName:"",lastName:""});
+  const [busy, setBusy] = React.useState(false);
+  async function createUser(event: React.FormEvent) { event.preventDefault(); setBusy(true); setError(""); try { const response=await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({...draft,role:"OPERATOR"})}); if(response.status===401){setToken(null);return;} if(!response.ok){setError("Unable to create user");return;} setDraft({email:"",firstName:"",lastName:""}); const refreshed=await fetch("/api/users",{headers:{Authorization:`Bearer ${token}`}}); setUsers((await refreshed.json()).items??[]); } finally {setBusy(false);} }
   async function login(event: React.FormEvent) { event.preventDefault(); setError(""); const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) }); if (!response.ok) { setError("Invalid administrator credentials"); return; } const data = await response.json(); sessionStorage.setItem("travelPlanToken", data.accessToken); setToken(data.accessToken); }
   React.useEffect(() => { if (!token) return; const headers = { Authorization: `Bearer ${token}` }; Promise.all([fetch("/api/users", { headers }), fetch("/api/travels", { headers })]).then(async ([u, t]) => { if (u.status === 401 || t.status === 401) { sessionStorage.removeItem("travelPlanToken"); setToken(null); return; } setUsers((await u.json()).items ?? []); setTravels((await t.json()).items ?? []); }).catch(() => setError("The administration services are unavailable")); }, [token]);
   if (!token) return <main className="login-shell"><form className="login-card" onSubmit={login}><p className="eyebrow">Travel Plan Admin</p><h1>Sign in</h1><label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} /></label><label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>{error && <p role="alert">{error}</p>}<button type="submit">Sign in securely</button></form></main>;
@@ -109,7 +113,7 @@ function App() {
             <h2 id="capabilities-title">Everything your team needs to coordinate travel</h2>
           </div>
 
-          <div className="card-grid">
+          <nav aria-label="Admin sections" className="section-nav">{sections.map(s=><button key={s.title} className={section===s.title?"active":""} onClick={()=>setSection(s.title)}>{s.title}</button>)}</nav><div className="card-grid">
             {sections.map((section, index) => (
               <article className="capability-card" key={section.title}>
                 <div className="card-topline">
@@ -123,7 +127,7 @@ function App() {
               </article>
             ))}
           </div>
-          <div className="data-summary"><h2>Live records</h2><p>{users.length} users · {travels.length} travels</p><button onClick={() => { sessionStorage.removeItem("travelPlanToken"); setToken(null); }}>Sign out</button></div>
+          <div className="data-summary"><h2>{section}</h2><p>{users.length} users · {travels.length} travels</p>{section==="Users and travelers"&&<form onSubmit={createUser} className="quick-form"><label>Email<input required type="email" value={draft.email} onChange={e=>setDraft({...draft,email:e.target.value})}/></label><label>First name<input required value={draft.firstName} onChange={e=>setDraft({...draft,firstName:e.target.value})}/></label><label>Last name<input required value={draft.lastName} onChange={e=>setDraft({...draft,lastName:e.target.value})}/></label><button disabled={busy}>{busy?"Saving…":"Create user"}</button></form>}<button onClick={() => { sessionStorage.removeItem("travelPlanToken"); setToken(null); }}>Sign out</button></div>
         </section>
       </main>
 

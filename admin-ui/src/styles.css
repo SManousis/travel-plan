@@ -210,6 +210,12 @@ h1 {
   box-shadow: 0 28px 70px rgba(37, 65, 58, 0.08);
   backdrop-filter: blur(12px);
 }
+.section-nav { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 28px; }
+.section-nav button { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:999px; padding:9px 14px; cursor:pointer; }
+.section-nav button.active, .section-nav button:focus-visible { background:var(--green); color:white; outline:3px solid var(--green-soft); outline-offset:2px; }
+.quick-form { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:18px 0; }
+.quick-form label { display:grid; gap:5px; color:var(--muted); font-size:.82rem; }
+.quick-form input { border:1px solid var(--line); border-radius:8px; padding:9px; min-width:150px; }
 
 .section-heading {
   display: grid;
