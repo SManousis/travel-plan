@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,6 +22,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final String username;
     private final String passwordHash;
+    private final Map<String, Instant> failedLogins = new ConcurrentHashMap<>();
 
     public AuthController(TokenService tokens,
                           @Value("${security.admin-username:admin}") String username,
@@ -30,9 +34,13 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        Instant blockedUntil = failedLogins.get(request.username());
+        if (blockedUntil != null && blockedUntil.isAfter(Instant.now())) return ResponseEntity.status(429).body(new ErrorResponse("RATE_LIMITED", "Try again later"));
         if (!username.equals(request.username()) || !passwordEncoder.matches(request.password(), passwordHash)) {
+            failedLogins.put(request.username(), Instant.now().plusSeconds(10));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("UNAUTHENTICATED", "Invalid credentials"));
         }
+        failedLogins.remove(request.username());
         return ResponseEntity.ok(TokenResponse.from(tokens.issue(username, "ADMIN")));
     }
 
@@ -48,8 +56,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(@RequestHeader("Authorization") String authorization) { tokens.revoke(authorization.substring("Bearer ".length())); }
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorization) { tokens.revoke(authorization.substring("Bearer ".length())); return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, ResponseCookie.from("travel_plan_refresh", "").httpOnly(true).secure(true).sameSite("Strict").path("/api/auth").maxAge(0).build().toString()).build(); }
 
     @GetMapping("/me")
     public TokenService.Claims me(@RequestAttribute("travelPlanClaims") TokenService.Claims claims) { return claims; }

@@ -18,6 +18,7 @@ public class TokenService {
     private final byte[] secret;
     private final long ttlSeconds;
     private final Map<String, Instant> revoked = new ConcurrentHashMap<>();
+    private final Map<String, Instant> revokedSubjects = new ConcurrentHashMap<>();
     private final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     private final Base64.Decoder decoder = Base64.getUrlDecoder();
 
@@ -46,7 +47,7 @@ public class TokenService {
             String[] values = new String(decoder.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
             if (values.length != 6 || !"travel-plan-auth".equals(values[2]) || !"travel-plan-admin".equals(values[3])) return null;
             long expiresAt = Long.parseLong(values[4]);
-            if (expiresAt <= Instant.now().getEpochSecond() || revoked.containsKey(values[5])) return null;
+            if (expiresAt <= Instant.now().getEpochSecond() || revoked.containsKey(values[5]) || revokedSubjects.containsKey(values[0])) return null;
             return new Claims(values[0], values[1], values[5], expiresAt);
         } catch (RuntimeException exception) {
             return null;
@@ -57,6 +58,8 @@ public class TokenService {
         Claims claims = verifyIgnoringRevocation(token);
         if (claims != null) revoked.put(claims.jti(), Instant.ofEpochSecond(claims.expiresAt()));
     }
+
+    public void revokeSubject(String subject) { revokedSubjects.put(subject, Instant.now()); }
 
     private Claims verifyIgnoringRevocation(String token) {
         try {

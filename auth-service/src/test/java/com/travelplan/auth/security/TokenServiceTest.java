@@ -10,7 +10,7 @@ class TokenServiceTest {
         TokenService service = new TokenService(SECRET, 60);
         TokenService.IssuedToken issued = service.issue("admin", "ADMIN");
         assertEquals("ADMIN", service.verify(issued.value()).role());
-        String tampered = issued.value().substring(0, issued.value().length() - 1) + "x";
+        String tampered = "A" + issued.value().substring(1);
         assertNull(service.verify(tampered));
     }
 
@@ -25,5 +25,12 @@ class TokenServiceTest {
     @Test void expiredTokenIsRejected() {
         TokenService service = new TokenService(SECRET, 0);
         assertNull(service.verify(service.issue("admin", "ADMIN").value()));
+    }
+
+    @Test void disablingSubjectRevokesAllIssuedTokens() {
+        TokenService service = new TokenService(SECRET, 60);
+        String token = service.issue("user-1", "ADMIN").value();
+        service.revokeSubject("user-1");
+        assertNull(service.verify(token));
     }
 }
