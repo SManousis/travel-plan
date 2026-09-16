@@ -21,7 +21,7 @@ public class AuthSecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, TokenService tokens) throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/login", "/api/auth/refresh", "/actuator/**").permitAll()
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/internal/**", "/actuator/**").permitAll()
                         .requestMatchers("/api/**").authenticated().anyRequest().permitAll())
                 .addFilterBefore(new BearerFilter(tokens), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -32,7 +32,7 @@ public class AuthSecurityConfig {
         BearerFilter(TokenService tokens) { this.tokens = tokens; }
         @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
-            if (request.getRequestURI().equals("/api/auth/login") || request.getRequestURI().equals("/api/auth/refresh")
+            if (request.getRequestURI().equals("/api/auth/login") || request.getRequestURI().equals("/api/auth/refresh") || request.getRequestURI().startsWith("/api/auth/internal/")
                     || request.getRequestURI().startsWith("/actuator/") || request.getRequestURI().startsWith("/internal/")) { chain.doFilter(request, response); return; }
             String header = request.getHeader("Authorization");
             TokenService.Claims claims = header != null && header.startsWith("Bearer ") ? tokens.verify(header.substring(7)) : null;

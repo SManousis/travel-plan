@@ -24,6 +24,7 @@ public class AuthController {
     private final String passwordHash;
     private final String serviceToken;
     private final Map<String, Instant> failedLogins = new ConcurrentHashMap<>();
+    private final Map<String, String> provisioned = new ConcurrentHashMap<>();
 
     public AuthController(TokenService tokens,
                           @Value("${security.admin-username:admin}") String username,
@@ -39,12 +40,20 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         Instant blockedUntil = failedLogins.get(request.username());
         if (blockedUntil != null && blockedUntil.isAfter(Instant.now())) return ResponseEntity.status(429).body(new ErrorResponse("RATE_LIMITED", "Try again later"));
-        if (!username.equals(request.username()) || !passwordEncoder.matches(request.password(), passwordHash)) {
+        String hash = username.equals(request.username()) ? passwordHash : provisioned.get(request.username());
+        if (hash == null || !passwordEncoder.matches(request.password(), hash)) {
             failedLogins.put(request.username(), Instant.now().plusSeconds(10));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("UNAUTHENTICATED", "Invalid credentials"));
         }
         failedLogins.remove(request.username());
         return ResponseEntity.ok(TokenResponse.from(tokens.issue(username, "ADMIN")));
+    }
+
+    @PostMapping("/internal/provision")
+    public ResponseEntity<Void> provision(@RequestBody ProvisionRequest request, @RequestHeader(value="X-Internal-Service-Token", required=false) String presented) {
+        if (!serviceToken.equals(presented)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        provisioned.putIfAbsent(request.username(), passwordEncoder.encode(request.password()));
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/refresh")
@@ -74,6 +83,7 @@ public class AuthController {
     private TokenService.Claims bearer(String value) { return value != null && value.startsWith("Bearer ") ? tokens.verify(value.substring(7)) : null; }
     private ResponseCookie refreshCookie(String token) { return ResponseCookie.from("travel_plan_refresh", token).httpOnly(true).secure(true).sameSite("Strict").path("/api/auth").maxAge(900).build(); }
     public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
+    public record ProvisionRequest(@NotBlank String username, @NotBlank String password) {}
     public record TokenResponse(String accessToken, String tokenType, long expiresAt) { static TokenResponse from(TokenService.IssuedToken t) { return new TokenResponse(t.value(), "Bearer", t.expiresAt()); } }
     public record ErrorResponse(String code, String message) {}
 }

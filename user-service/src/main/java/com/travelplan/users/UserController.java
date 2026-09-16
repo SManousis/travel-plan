@@ -19,6 +19,7 @@ public class UserController {
     @GetMapping("/api/travelers") public Page<UserDomain.Traveler> travelers(@RequestParam(required=false) UUID userId,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return page(store.travelers(userId),page,size);}
     @PostMapping("/api/travelers") public ResponseEntity<UserDomain.Traveler> createTraveler(@Valid @RequestBody TravelerCreate b){return ResponseEntity.status(HttpStatus.CREATED).body(store.createTraveler(b.userId(),b.passportNumber(),b.nationality()));}
     @GetMapping("/api/travelers/{id}") public UserDomain.Traveler traveler(@PathVariable UUID id){return store.traveler(id);}
+    @PatchMapping("/api/travelers/{id}") public UserDomain.Traveler updateTraveler(@PathVariable UUID id,@Valid @RequestBody TravelerPatch b){return store.updateTraveler(id,b.passportNumber(),b.nationality());}
     @DeleteMapping("/api/travelers/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void deleteTraveler(@PathVariable UUID id){store.deleteTraveler(id);}
     @ExceptionHandler(UserStore.NotFound.class) ResponseEntity<Error> notFound(){return ResponseEntity.status(404).body(new Error("NOT_FOUND","Resource not found"));}
     @ExceptionHandler(UserStore.Conflict.class) ResponseEntity<Error> conflict(UserStore.Conflict e){return ResponseEntity.status(409).body(new Error(e.code,"Request conflicts with current state"));}
@@ -29,4 +30,5 @@ public class UserController {
     public record UserCreate(@NotBlank @Email String email,@NotBlank String firstName,@NotBlank String lastName, UserDomain.Role role) { public UserCreate { if(role==null)role=UserDomain.Role.OPERATOR; } }
     public record UserPatch(@Email String email,String firstName,String lastName,UserDomain.Role role,UserDomain.Status status) {}
     public record TravelerCreate(@NotNull UUID userId,@NotBlank String passportNumber,@NotBlank String nationality) {}
+    public record TravelerPatch(@NotBlank String passportNumber,@NotBlank String nationality) {}
 }

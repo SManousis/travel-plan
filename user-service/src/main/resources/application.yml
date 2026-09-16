@@ -1,6 +1,10 @@
 spring:
   application:
     name: user-service
+auth:
+  service-url: ${AUTH_SERVICE_URL:http://auth-service:8081}
+security:
+  internal-service-token: ${AUTH_INTERNAL_SERVICE_TOKEN:change-me-internal}
   autoconfigure:
     exclude: org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
 server:
