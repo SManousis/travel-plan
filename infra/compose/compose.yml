@@ -30,7 +30,7 @@ services:
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
-      - ../neo4j/init:/var/lib/neo4j/import/init:ro
+      - ../neo4j/init:/var/lib/neo4j/import/init
     networks: [backend]
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7474 || exit 1"]

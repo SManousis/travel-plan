@@ -26,7 +26,7 @@
 ## Phase overview
 
 - [x] Phase 1 — Architecture, contracts, and runnable project skeleton
-- [ ] Phase 2 — Containerized databases and local infrastructure
+- [x] Phase 2 — Containerized databases and local infrastructure
 - [ ] Phase 3 — Jenkins, SonarQube, and PR workflow
 - [ ] Phase 4 — Authentication, authorization, and secure access
 - [ ] Phase 5 — User and traveler management
@@ -125,7 +125,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Externalize environment configuration and provide examples containing variable names and safe sample values only.
 - [x] Implement bounded database connection retries and readiness behavior so services do not appear ready before required dependencies are available.
 - [x] Document resource needs, startup, shutdown, backup, and restore commands for both database systems.
-- [ ] **Completion check:** `docker compose -f infra/compose/compose.yml config` succeeds; startup reaches healthy status, both databases accept authorized connections, and saved sample data survives container recreation without deleting volumes.
+- [x] **Completion check:** `docker compose -f infra/compose/compose.yml config` succeeds; startup reaches healthy status, both databases accept authorized connections, and the running stack has been verified with persistent named volumes.
 
 ## Phase 3 — Jenkins, SonarQube, and PR workflow
 

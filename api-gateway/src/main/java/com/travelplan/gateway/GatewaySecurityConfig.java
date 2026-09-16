@@ -10,9 +10,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.WebFilter;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
 
 @Configuration
 public class GatewaySecurityConfig {
+    @Bean
+    SecurityWebFilterChain gatewaySecurityChain(ServerHttpSecurity http) {
+        return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(exchange -> exchange.anyExchange().permitAll())
+                .build();
+    }
+
     @Bean
     WebFilter adminTokenFilter(@Value("${security.token-secret:replace-with-at-least-32-random-characters}") String secret) {
         if (secret.length() < 32) throw new IllegalArgumentException("security.token-secret must contain at least 32 characters");
