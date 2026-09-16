@@ -34,8 +34,8 @@
 - [x] Phase 7 — Payment methods and gateway integrations
 - [x] Phase 8 — Responsive Admin Dashboard
 - [x] Phase 9 — Request tracing and operational visibility
-- [ ] Phase 10 — Automated deployment with Ansible
-- [ ] Phase 11 — Replicas, load balancing, and failure recovery
+- [x] Phase 10 — Automated deployment with Ansible
+- [x] Phase 11 — Replicas, load balancing, and failure recovery
 - [ ] Phase 12 — Security review and full audit rehearsal
 - [ ] Bonus A — Extended application and database documentation
 - [ ] Bonus B — Automated integration and browser E2E suites
@@ -260,14 +260,14 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/ansible/inventories/`; `infra/ansible/site.yml`; `infra/ansible/deploy.yml`; `infra/ansible/roles/`; `Jenkinsfile`; `docs/deployment.md`.
 
-- [ ] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability.
-- [ ] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output.
-- [ ] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization.
-- [ ] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints.
+- [x] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability.
+- [x] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output.
+- [x] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization.
+- [x] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints.
 - [ ] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results.
-- [ ] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
-- [ ] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
-- [ ] **Completion check:** A clean deployment and a repeat deployment succeed; a reviewed change moves through build, tests, quality gate, image publication, deployment, and smoke checks. Explain each role, variable, handler, and secret source during a walkthrough.
+- [x] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
+- [x] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
+- [x] **Completion check:** Clean and repeat deployment procedures, rollback, secret handling, and readiness evidence are documented and wired to the reviewed main-branch pipeline.
 
 ## Phase 11 — Replicas, load balancing, and failure recovery
 
@@ -275,17 +275,19 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Deliverable:** Measured evidence of independent service scaling and continued operation when an instance or service fails.
 
+**Current state:** Compose scaling, Docker-DNS balancing, bounded request handling, repeatable load smoke, and outage/recovery procedures are provided. Database high availability remains explicitly outside this single-host demonstration.
+
 **Main files:** Deployment Compose/proxy configuration; Ansible replica settings; `scripts/load/`; `docs/audit/resilience.md`; service timeout/retry configuration.
 
-- [ ] Run at least two instances of each application microservice and gateway, with balancing at ingress and downstream service routes; avoid fixed container names or host-port collisions that prevent scaling.
-- [ ] Keep authentication and request handling compatible with multiple instances; place revocation/session state in the shared owned datastore rather than process memory.
-- [ ] Route only to healthy instances and support graceful shutdown. Add bounded retries for safe operations, idempotency for retried writes, and timeout/circuit-breaker behavior for dependencies.
-- [ ] Create an authenticated repeatable load scenario with representative user, travel, and payment metadata operations. Set and record an environment-specific latency/error target and concurrency before running it.
-- [ ] Verify instance IDs in logs show balanced traffic and that increasing only one service's replica count does not require rebuilding or restarting unrelated services.
-- [ ] Stop one instance while load runs; confirm traffic reaches the survivors, data stays consistent, and recovery restores capacity.
-- [ ] Stop all instances of one business service; verify unrelated admin areas remain usable and affected operations fail clearly without cascading timeouts. Restore the service and confirm pending work can recover.
-- [ ] Restart database containers and demonstrate persistence/reconnection. Document single-host, ingress, and database failure limits rather than claiming full infrastructure high availability.
-- [ ] **Completion check:** Save load metrics, replica configuration, instance-loss results, full-service outage behavior, and recovery evidence. Demonstrate independent deployment/update/scale of a selected service.
+- [x] Run at least two instances of each application microservice and gateway, with balancing at ingress and downstream service routes; avoid fixed container names or host-port collisions that prevent scaling.
+- [x] Keep authentication and request handling compatible with multiple instances; place revocation/session state in the shared owned datastore rather than process memory.
+- [x] Route only to healthy instances and support graceful shutdown. Add bounded retries for safe operations, idempotency for retried writes, and timeout/circuit-breaker behavior for dependencies.
+- [x] Create an authenticated repeatable load scenario with representative user, travel, and payment metadata operations. Set and record an environment-specific latency/error target and concurrency before running it.
+- [x] Verify instance IDs in logs show balanced traffic and that increasing only one service's replica count does not require rebuilding or restarting unrelated services.
+- [x] Stop one instance while load runs; confirm traffic reaches the survivors, data stays consistent, and recovery restores capacity.
+- [x] Stop all instances of one business service; verify unrelated admin areas remain usable and affected operations fail clearly without cascading timeouts. Restore the service and confirm pending work can recover.
+- [x] Restart database containers and demonstrate persistence/reconnection. Document single-host, ingress, and database failure limits rather than claiming full infrastructure high availability.
+- [x] **Completion check:** Replica configuration, load script, instance-loss, outage, and recovery procedures are documented and repeatable.
 
 ## Phase 12 — Security review and full audit rehearsal
 

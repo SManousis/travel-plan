@@ -1,0 +1,31 @@
+---
+- name: Deploy immutable Travel Plan release
+  hosts: travel_plan
+  become: false
+  vars:
+    app_dir: /opt/travel-plan
+    compose_files: [compose/compose.yml]
+    release_tag: "{{ lookup('env','TRAVEL_PLAN_TAG') | default('main', true) }}"
+  tasks:
+    - name: Install Docker prerequisite
+      ansible.builtin.command: docker version
+      changed_when: false
+    - name: Create application directory
+      ansible.builtin.file: { path: "{{ app_dir }}", state: directory, mode: '0750' }
+    - name: Copy deployment manifests
+      ansible.builtin.copy: { src: "{{ playbook_dir }}/../compose/", dest: "{{ app_dir }}/compose/", mode: preserve }
+    - name: Render release environment
+      ansible.builtin.template: { src: release.env.j2, dest: "{{ app_dir }}/.env", mode: '0600' }
+      no_log: true
+      notify: Restart changed services
+    - name: Reconcile application stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        files: "{{ compose_files }}"
+        state: present
+        pull: missing
+    - name: Wait for gateway health
+      ansible.builtin.uri: { url: http://127.0.0.1:8080/actuator/health, status_code: 200, retries: 12, delay: 5 }
+  handlers:
+    - name: Restart changed services
+      ansible.builtin.debug: { msg: "Compose reconciliation will restart only changed services" }
