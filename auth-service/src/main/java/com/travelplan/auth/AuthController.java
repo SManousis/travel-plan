@@ -22,14 +22,17 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final String username;
     private final String passwordHash;
+    private final String serviceToken;
     private final Map<String, Instant> failedLogins = new ConcurrentHashMap<>();
 
     public AuthController(TokenService tokens,
                           @Value("${security.admin-username:admin}") String username,
-                          @Value("${security.admin-password:change-me-admin}") String password) {
+                          @Value("${security.admin-password:change-me-admin}") String password,
+                          @Value("${security.internal-service-token:change-me-internal}") String serviceToken) {
         this.tokens = tokens;
         this.username = username;
         this.passwordHash = passwordEncoder.encode(password);
+        this.serviceToken = serviceToken;
     }
 
     @PostMapping("/login")
@@ -60,6 +63,13 @@ public class AuthController {
 
     @GetMapping("/me")
     public TokenService.Claims me(@RequestAttribute("travelPlanClaims") TokenService.Claims claims) { return claims; }
+
+    @PostMapping("/internal/revoke/{subject}")
+    public ResponseEntity<Void> revokeSubject(@PathVariable String subject, @RequestHeader(value = "X-Internal-Service-Token", required = false) String presented) {
+        if (!serviceToken.equals(presented)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        tokens.revokeSubject(subject);
+        return ResponseEntity.noContent().build();
+    }
 
     private TokenService.Claims bearer(String value) { return value != null && value.startsWith("Bearer ") ? tokens.verify(value.substring(7)) : null; }
     private ResponseCookie refreshCookie(String token) { return ResponseCookie.from("travel_plan_refresh", token).httpOnly(true).secure(true).sameSite("Strict").path("/api/auth").maxAge(900).build(); }

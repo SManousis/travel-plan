@@ -47,6 +47,7 @@ services:
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin}
+      AUTH_INTERNAL_SERVICE_TOKEN: ${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}
     depends_on:
       postgres: { condition: service_healthy }
     networks: [backend]
