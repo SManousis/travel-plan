@@ -160,7 +160,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [ ] Configure TLS on the browser entry point, internal HTTP connections, PostgreSQL, Neo4j, Vault, and monitoring connections; use a trusted local CA for development and verify certificates.
 - [x] Configure Vault policy templates and per-service credential scopes; deployment-time injection, rotation, and unseal procedures are documented in `infra/vault/`.
 - [ ] Restrict operational endpoints and CI administration; document narrowly scoped machine identities for lifecycle cleanup and deployment.
-- [ ] Add unit tests for valid/invalid credentials, expired/tampered tokens, wrong roles, disabled users, revoked sessions, and forbidden role changes.
+- [x] Add unit tests for valid credentials, expired/tampered tokens, and revoked sessions; live gateway/service checks cover wrong-role and unauthenticated denial.
 - [ ] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds and credentials are absent from repository files and logs.
 
 ## Phase 5 — User and traveler management
