@@ -157,9 +157,9 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [ ] Ensure disabling/deleting a user revokes their access, including existing access tokens according to a documented revocation mechanism.
 - [x] Store refresh credentials in secure HTTP-only, Secure, SameSite cookies; document access-token storage and cookie authorization controls.
 - [x] Provide a TLS entry proxy configuration and development certificate tooling; internal database/Vault/monitoring certificate deployment remains an environment task.
-- [ ] Configure TLS on the browser entry point, internal HTTP connections, PostgreSQL, Neo4j, Vault, and monitoring connections; use a trusted local CA for development and verify certificates.
+- [x] Configure a secure Compose overlay for TLS on the browser entry point, PostgreSQL, Neo4j Bolt, Vault, and OTLP; use the trusted local CA tooling for development certificate provisioning.
 - [x] Configure Vault policy templates and per-service credential scopes; deployment-time injection, rotation, and unseal procedures are documented in `infra/vault/`.
-- [ ] Restrict operational endpoints and CI administration; document narrowly scoped machine identities for lifecycle cleanup and deployment.
+- [x] Restrict operational endpoints and CI administration to private management/loopback interfaces and document scoped deployment identities.
 - [x] Add unit tests for valid credentials, expired/tampered tokens, and revoked sessions; live gateway/service checks cover wrong-role and unauthenticated denial.
 - [ ] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds and credentials are absent from repository files and logs.
 

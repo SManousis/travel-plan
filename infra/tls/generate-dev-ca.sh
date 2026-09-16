@@ -11,4 +11,8 @@ openssl x509 -req -sha256 -days 398 -in "$output_dir/gateway.csr" \
   -CA "$output_dir/dev-ca.crt" -CAkey "$output_dir/dev-ca.key" -CAcreateserial \
   -out "$output_dir/gateway.crt" -extfile <(printf 'subjectAltName=DNS:localhost,IP:127.0.0.1')
 rm -f "$output_dir/gateway.csr" "$output_dir/dev-ca.srl"
+cp "$output_dir/gateway.key" "$output_dir/server.key"
+cp "$output_dir/gateway.crt" "$output_dir/server.crt"
+cp "$output_dir/gateway.key" "$output_dir/vault.key"
+cp "$output_dir/gateway.crt" "$output_dir/vault.crt"
 echo "Generated development CA and gateway certificate in $output_dir"
