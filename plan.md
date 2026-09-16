@@ -264,7 +264,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output.
 - [x] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization.
 - [x] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints.
-- [ ] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results.
+- [x] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results.
 - [x] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
 - [x] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
 - [x] **Completion check:** Clean and repeat deployment procedures, rollback, secret handling, and readiness evidence are documented and wired to the reviewed main-branch pipeline.
