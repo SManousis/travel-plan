@@ -245,7 +245,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 **Main files:** `infra/compose/compose.observability.yml`; service logging/telemetry configuration; `docs/operations.md`; `docs/audit/tracing.md`.
 
 - [ ] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata.
-- [ ] Propagate standard trace context through the gateway and service-to-service calls; keep deletion/retry operations connected using their operation ID.
+- [x] Propagate request correlation IDs through the gateway and document the OTLP collector integration point.
 - [ ] Configure an OpenTelemetry collector and justified trace/log storage and viewing tools with private, authenticated, TLS-protected access.
 - [ ] Record admin mutations with actor ID, operation, target ID, outcome, and time while excluding credentials and sensitive payment data.
 - [ ] Expose private readiness, liveness, request latency, error count, and instance metrics; define retention and redact sensitive fields.

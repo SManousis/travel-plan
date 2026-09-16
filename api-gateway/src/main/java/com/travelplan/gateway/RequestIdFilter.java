@@ -1,0 +1,3 @@
+package com.travelplan.gateway;
+import java.util.UUID; import org.springframework.context.annotation.Bean; import org.springframework.context.annotation.Configuration; import org.springframework.web.server.WebFilter;
+@Configuration public class RequestIdFilter { @Bean WebFilter requestId(){return (exchange,chain)->{String incoming=exchange.getRequest().getHeaders().getFirst("X-Request-ID");String id=incoming==null||incoming.isBlank()?UUID.randomUUID().toString():incoming;exchange.getResponse().getHeaders().set("X-Request-ID",id);return chain.filter(exchange).contextWrite(ctx->ctx.put("travelPlan.requestId",id));};}}
