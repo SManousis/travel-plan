@@ -3,8 +3,11 @@ openapi: 3.0.3
 info:
   title: Payment methods and gateways API
   version: 0.1.0
-  description: 'FUTURE CONTRACT: not implemented by the Phase 1 skeleton. Dependency
-    unavailable or work could not be durably accepted.'
+  description: 'Target contract. The current synchronous implementation and its response
+    differences are documented in docs/payments.md. Local active-user validation is
+    implemented; provider-customer ownership is not proven because no trusted binding
+    to a local user exists. Operation resources, default selection, and per-gateway
+    Vault secrets remain future work.'
 servers:
 - url: http://localhost:8080
   description: Loopback development gateway; deployment requires HTTPS.

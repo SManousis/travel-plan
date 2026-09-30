@@ -41,7 +41,7 @@ final class Neo4jTravelRepository {
 
     private void initializeSchema() {
         try (Session session = driver.session()) {
-            for (String label : List.of("Travel", "Destination", "DestinationStop", "Activity", "Accommodation", "Transport", "Participation")) {
+            for (String label : List.of("Travel", "Destination", "DestinationStop", "Activity", "Accommodation", "Transport", "Participation", "TravelerGuard")) {
                 session.run("CREATE CONSTRAINT " + label.toLowerCase(Locale.ROOT)
                         + "_id IF NOT EXISTS FOR (n:" + label + ") REQUIRE n.id IS UNIQUE").consume();
             }
@@ -179,6 +179,10 @@ final class Neo4jTravelRepository {
     Travel addParticipant(UUID travelId, UUID travelerId) {
         try (Session session = driver.session()) {
             session.executeWrite(tx -> {
+                var guard = tx.run("MERGE (g:TravelerGuard {id:$travelerId}) "
+                        + "SET g.lockVersion=coalesce(g.lockVersion,0)+1 RETURN coalesce(g.deleted,false) AS deleted",
+                        Map.of("travelerId", travelerId.toString())).single();
+                if (guard.get("deleted").asBoolean()) throw new TravelStore.Conflict("TRAVELER_REMOVED");
                 if (!tx.run("MATCH (t:Travel {id:$id}) "
                         + "SET t.lockVersion=coalesce(t.lockVersion,0)+1 RETURN t", Map.of("id", travelId.toString())).hasNext())
                     throw new TravelStore.NotFound();
@@ -202,6 +206,21 @@ final class Neo4jTravelRepository {
                 tx.run("MATCH (t:Travel {id:$travelId})-[:HAS_PARTICIPANT]->(p:Participation {travelerId:$travelerId}) "
                                 + "DETACH DELETE p",
                         Map.of("travelId", travelId.toString(), "travelerId", travelerId.toString())).consume();
+                return null;
+            });
+        }
+    }
+
+    void removeParticipants(Set<UUID> travelerIds) {
+        try (Session session = driver.session()) {
+            session.executeWrite(tx -> {
+                List<String> ordered = travelerIds.stream().map(UUID::toString).sorted().toList();
+                for (String travelerId : ordered) {
+                    tx.run("MERGE (g:TravelerGuard {id:$travelerId}) SET g.deleted=true",
+                            Map.of("travelerId", travelerId)).consume();
+                    tx.run("MATCH (p:Participation {travelerId:$travelerId}) DETACH DELETE p",
+                            Map.of("travelerId", travelerId)).consume();
+                }
                 return null;
             });
         }

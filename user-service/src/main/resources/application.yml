@@ -14,6 +14,10 @@ security:
 services:
   auth:
     url: ${AUTH_SERVICE_URL:http://auth-service:8081}
+  payment:
+    url: ${PAYMENT_SERVICE_URL:http://127.0.0.1:8084}
+  travel:
+    url: ${TRAVEL_SERVICE_URL:http://127.0.0.1:8083}
 management:
   server:
     address: ${MANAGEMENT_ADDRESS:127.0.0.1}

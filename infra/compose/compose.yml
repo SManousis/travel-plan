@@ -61,6 +61,8 @@ services:
       SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
       AUTH_INTERNAL_SERVICE_TOKEN: "${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}"
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      TRAVEL_SERVICE_URL: http://travel-service:8083
       AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
       postgres: { condition: service_healthy }
@@ -90,6 +92,7 @@ services:
       SPRING_PROFILES_ACTIVE: infra
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
       AUTH_INTERNAL_SERVICE_TOKEN: "${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}"
+      USER_SERVICE_URL: http://user-service:8082
       AUTH_SERVICE_URL: http://auth-service:8081
       STRIPE_SANDBOX_SECRET_KEY: ${STRIPE_SANDBOX_SECRET_KEY:-}
       PAYPAL_SANDBOX_CLIENT_ID: ${PAYPAL_SANDBOX_CLIENT_ID:-}

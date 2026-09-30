@@ -37,9 +37,14 @@ import org.springframework.web.bind.annotation.RestController;
 public final class PaymentController {
     private final PaymentStore store;
     private final Map<String, ProviderAdapter> adapters;
+    private final PaymentDeletionService deletion;
+    private final PaymentUserClient users;
 
-    public PaymentController(PaymentStore store, List<ProviderAdapter> providers) {
+    public PaymentController(PaymentStore store, List<ProviderAdapter> providers,
+                             PaymentDeletionService deletion, PaymentUserClient users) {
         this.store = store;
+        this.deletion = deletion;
+        this.users = users;
         this.adapters = new HashMap<>();
         providers.forEach(adapter -> adapters.put(adapter.provider(), adapter));
     }
@@ -74,8 +79,17 @@ public final class PaymentController {
     ResponseEntity<MethodView> createMethod(@Valid @RequestBody MethodWrite body,
                                             @RequestHeader("Idempotency-Key") UUID key) {
         String idempotencyKey = key.toString();
+        String hash = requestHash(body);
+        Method previous = store.existingForKey(idempotencyKey, hash);
+        try {
+            users.requireActive(body.userId());
+        } catch (NotFound | Conflict ex) {
+            if (previous == null) throw ex;
+            return ResponseEntity.status("PENDING".equals(previous.status()) ? HttpStatus.ACCEPTED : HttpStatus.OK)
+                    .body(view(previous));
+        }
         var attempt = store.beginConnect(body.userId(), body.gatewayId(), body.providerReference(),
-                body.displayLabel(), idempotencyKey, requestHash(body));
+                body.displayLabel(), idempotencyKey, hash);
         if (!attempt.shouldInspect()) return ResponseEntity.status("PENDING".equals(attempt.method().status())
                 ? HttpStatus.ACCEPTED : HttpStatus.OK).body(view(attempt.method()));
         ProviderAdapter adapter = adapter(attempt.method().provider());
@@ -102,24 +116,7 @@ public final class PaymentController {
 
     @DeleteMapping("/api/payment-methods/{id}")
     ResponseEntity<Void> deleteMethod(@PathVariable UUID id, @RequestHeader("Idempotency-Key") UUID key) {
-        var attempt = store.beginDelete(id);
-        if (!attempt.shouldDetach()) return ResponseEntity.accepted().build();
-        Method method = attempt.method();
-        if ("CONNECT".equals(method.failureStage()) && "INVALID_PROVIDER_REFERENCE".equals(method.failureCode())) {
-            store.finishDelete(method);
-            return ResponseEntity.noContent().build();
-        }
-        try {
-            adapter(method.provider()).detach(method.providerReference(), key.toString());
-            store.finishDelete(method);
-            return ResponseEntity.noContent().build();
-        } catch (ProviderAdapter.Rejected ex) {
-            store.failDelete(method, ex.code);
-            throw ex;
-        } catch (ProviderAdapter.Unavailable ex) {
-            store.failDelete(method, ex.code);
-            throw ex;
-        }
+        return deletion.delete(id, key) ? ResponseEntity.noContent().build() : ResponseEntity.accepted().build();
     }
 
     private ProviderAdapter adapter(String provider) {

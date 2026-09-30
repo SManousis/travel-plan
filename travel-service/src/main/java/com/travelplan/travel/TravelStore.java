@@ -15,6 +15,7 @@ public class TravelStore {
     private final Neo4jTravelRepository graph;
     private final Map<UUID, Destination> destinations = new ConcurrentHashMap<>();
     private final Map<UUID, Travel> travels = new ConcurrentHashMap<>();
+    private final Set<UUID> removedTravelerIds = ConcurrentHashMap.newKeySet();
 
     public TravelStore() { graph = null; }
 
@@ -86,7 +87,7 @@ public class TravelStore {
         return result;
     }
 
-    public Travel update(UUID id, String name, LocalDate start, LocalDate end, List<Stop> stops,
+    public synchronized Travel update(UUID id, String name, LocalDate start, LocalDate end, List<Stop> stops,
                          List<Activity> activities, List<Accommodation> stays, List<Transport> transports) {
         Travel old = travel(id);
         validate(start, end, stops, activities, stays, transports);
@@ -97,8 +98,9 @@ public class TravelStore {
         return result;
     }
 
-    public Travel addParticipant(UUID id, UUID traveler) {
+    public synchronized Travel addParticipant(UUID id, UUID traveler) {
         if (graph != null) return graph.addParticipant(id, traveler);
+        if (removedTravelerIds.contains(traveler)) throw new Conflict("TRAVELER_REMOVED");
         Travel old = travel(id);
         Set<UUID> ids = new HashSet<>(old.travelerIds());
         ids.add(traveler);
@@ -107,12 +109,23 @@ public class TravelStore {
         return result;
     }
 
-    public void removeParticipant(UUID id, UUID traveler) {
+    public synchronized void removeParticipant(UUID id, UUID traveler) {
         if (graph != null) { graph.removeParticipant(id, traveler); return; }
         Travel old = travel(id);
         Set<UUID> ids = new HashSet<>(old.travelerIds());
         ids.remove(traveler);
         travels.put(id, withTravelers(old, ids));
+    }
+
+    public synchronized void removeParticipants(Set<UUID> travelerIds) {
+        if (travelerIds.isEmpty()) return;
+        if (graph != null) { graph.removeParticipants(travelerIds); return; }
+        removedTravelerIds.addAll(travelerIds);
+        travels.replaceAll((id, old) -> {
+            Set<UUID> remaining = new HashSet<>(old.travelerIds());
+            remaining.removeAll(travelerIds);
+            return withTravelers(old, remaining);
+        });
     }
 
     public void delete(UUID id) {

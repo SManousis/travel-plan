@@ -20,19 +20,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 final class PaymentStore {
     private static final String METHOD_COLUMNS = "id,user_id,gateway_id,provider,provider_reference,display_label,"
             + "status,display_metadata,failure_code,failure_stage,idempotency_key,request_hash,created_at,updated_at";
     private final JdbcTemplate jdbc;
+    private final TransactionTemplate transactions;
     private final Map<UUID, Gateway> localGateways = new ConcurrentHashMap<>();
     private final Map<UUID, Method> localMethods = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> deletingUsers = ConcurrentHashMap.newKeySet();
 
-    PaymentStore() { this.jdbc = null; }
+    PaymentStore() { this.jdbc = null; this.transactions = null; }
 
     @Autowired
-    PaymentStore(ObjectProvider<JdbcTemplate> provider) { this.jdbc = provider.getIfAvailable(); }
+    PaymentStore(ObjectProvider<JdbcTemplate> provider, ObjectProvider<PlatformTransactionManager> managers) {
+        this.jdbc = provider.getIfAvailable();
+        PlatformTransactionManager manager = managers.getIfAvailable();
+        this.transactions = manager == null ? null : new TransactionTemplate(manager);
+        if (jdbc != null && transactions == null) throw new IllegalStateException("Payment transactions unavailable");
+    }
 
     List<Gateway> gateways() {
         if (jdbc != null) return jdbc.query("SELECT id,provider,display_name,enabled,created_at FROM payment_gateways "
@@ -112,9 +121,34 @@ final class PaymentStore {
 
     synchronized ConnectAttempt beginConnect(UUID userId, UUID gatewayId, String reference, String label,
                                              String idempotencyKey, String requestHash) {
+        if (jdbc != null) {
+            try {
+                return transactions.execute(status -> beginConnectLocked(userId, gatewayId, reference,
+                        label, idempotencyKey, requestHash));
+            } catch (DataIntegrityViolationException ex) {
+                Method concurrent = byIdempotencyKey(idempotencyKey);
+                if (concurrent != null) {
+                    if (!requestHash.equals(concurrent.requestHash())) throw new Conflict("IDEMPOTENCY_KEY_REUSED");
+                    return new ConnectAttempt(concurrent, false, false);
+                }
+                throw new Conflict("PAYMENT_METHOD_EXISTS");
+            }
+        }
+        return beginConnectLocked(userId, gatewayId, reference, label, idempotencyKey, requestHash);
+    }
+
+    private ConnectAttempt beginConnectLocked(UUID userId, UUID gatewayId, String reference, String label,
+                                              String idempotencyKey, String requestHash) {
+        boolean deleting;
+        if (jdbc != null) {
+            jdbc.update("INSERT INTO payment_user_lifecycle(user_id) VALUES (?) ON CONFLICT DO NOTHING", userId);
+            deleting = Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT deleting FROM payment_user_lifecycle WHERE user_id=? FOR UPDATE", Boolean.class, userId));
+        } else deleting = deletingUsers.contains(userId);
         Method previous = byIdempotencyKey(idempotencyKey);
         if (previous != null) {
             if (!requestHash.equals(previous.requestHash())) throw new Conflict("IDEMPOTENCY_KEY_REUSED");
+            if (deleting) return new ConnectAttempt(previous, false, false);
             if ("PENDING".equals(previous.status())) {
                 if (jdbc != null) {
                     int claimed = jdbc.update("UPDATE payment_methods SET updated_at=CURRENT_TIMESTAMP WHERE id=? "
@@ -141,30 +175,37 @@ final class PaymentStore {
             }
             return new ConnectAttempt(previous, false, false);
         }
+        if (deleting) throw new Conflict("USER_DELETION_IN_PROGRESS");
         Gateway gateway = gateway(gatewayId);
         if (!gateway.enabled()) throw new Conflict("GATEWAY_DISABLED");
         if (duplicateReference(gateway.provider(), reference)) throw new Conflict("PAYMENT_METHOD_EXISTS");
         Instant now = Instant.now();
         Method pending = new Method(UUID.randomUUID(), userId, gatewayId, gateway.provider(), reference,
                 label, "PENDING", null, null, null, idempotencyKey, requestHash, now, now);
-        if (jdbc != null) {
-            try {
-                jdbc.update("INSERT INTO payment_methods(id,user_id,gateway_id,provider,provider_reference,"
-                                + "display_label,status,display_metadata,failure_code,failure_stage,idempotency_key,"
-                                + "request_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
-                        pending.id(), pending.userId(), pending.gatewayId(), pending.provider(),
-                        pending.providerReference(), pending.displayLabel(), pending.status(), null, null, null,
-                        pending.idempotencyKey(), pending.requestHash(), Timestamp.from(pending.createdAt()));
-            } catch (DataIntegrityViolationException ex) {
-                Method concurrent = byIdempotencyKey(idempotencyKey);
-                if (concurrent != null) {
-                    if (!requestHash.equals(concurrent.requestHash())) throw new Conflict("IDEMPOTENCY_KEY_REUSED");
-                    return new ConnectAttempt(concurrent, false, false);
-                }
-                throw new Conflict("PAYMENT_METHOD_EXISTS");
-            }
-        } else localMethods.put(pending.id(), pending);
+        if (jdbc != null) jdbc.update("INSERT INTO payment_methods(id,user_id,gateway_id,provider,provider_reference,"
+                        + "display_label,status,display_metadata,failure_code,failure_stage,idempotency_key,"
+                        + "request_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
+                pending.id(), pending.userId(), pending.gatewayId(), pending.provider(),
+                pending.providerReference(), pending.displayLabel(), pending.status(), null, null, null,
+                pending.idempotencyKey(), pending.requestHash(), Timestamp.from(pending.createdAt()));
+        else localMethods.put(pending.id(), pending);
         return new ConnectAttempt(jdbc == null ? pending : method(pending.id()), true, true);
+    }
+
+    Method existingForKey(String idempotencyKey, String requestHash) {
+        Method previous = byIdempotencyKey(idempotencyKey);
+        if (previous != null && !requestHash.equals(previous.requestHash()))
+            throw new Conflict("IDEMPOTENCY_KEY_REUSED");
+        return previous;
+    }
+
+    synchronized void startUserCleanup(UUID userId) {
+        if (jdbc != null) transactions.executeWithoutResult(status -> {
+            jdbc.update("INSERT INTO payment_user_lifecycle(user_id) VALUES (?) ON CONFLICT DO NOTHING", userId);
+            jdbc.update("UPDATE payment_user_lifecycle SET deleting=TRUE,updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
+                    userId);
+        });
+        else deletingUsers.add(userId);
     }
 
     synchronized Method completeConnect(Method claim, String displayMetadata) {
@@ -187,7 +228,8 @@ final class PaymentStore {
 
     synchronized DeleteAttempt beginDelete(UUID id) {
         Method old = method(id);
-        if ("PENDING".equals(old.status())) throw new Conflict("METHOD_CONNECTION_IN_PROGRESS");
+        if ("PENDING".equals(old.status()) && old.updatedAt().isAfter(Instant.now().minusSeconds(30)))
+            throw new Conflict("METHOD_CONNECTION_IN_PROGRESS");
         if ("DELETION_PENDING".equals(old.status())) {
             if (jdbc != null) {
                 boolean claimed = jdbc.update("UPDATE payment_methods SET updated_at=CURRENT_TIMESTAMP "

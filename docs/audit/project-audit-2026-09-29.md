@@ -42,6 +42,12 @@ On `build-security-data-fixes`, payment-service now has a PostgreSQL-backed stor
 
 This is **code and compile evidence only**. No Stripe or PayPal credentials were available, so neither provider flow has been demonstrated against a live sandbox. Existing V1 payment rows require the reconciliation procedure in `docs/operations.md` before payment-list reads resume. The current endpoints remain synchronous and do not yet implement the operation resources, default selection, Vault secret resolution, provider-customer-to-local-user ownership proof, user-deletion cleanup, or webhook decisions described in `docs/api/payments.yaml` and the unchecked Phase 7 tasks. The original 2026-09-29 findings below are retained as baseline evidence; Phase 7 is still **not complete**.
 
+## User/payment cleanup follow-up — 2026-09-30
+
+On the same remediation branch, user deletion now records a durable stage in PostgreSQL and resumes after interruption. It marks deletion in progress, revokes auth, disables the profile, asks payment-service to detach every method, asks travel-service to remove the user's traveler participation, then deletes the owned traveler rows. Payment-service keeps a user tombstone so new connections cannot be accepted after cleanup begins. Travel-service keeps traveler tombstones to reject later participation with removed IDs. Method/provider failures remain visible and cause user deletion to return `202` rather than falsely reporting completion; unavailable dependencies return `503`. Payment creation also checks the local user's active status through a protected internal endpoint.
+
+This is **code and compile evidence only**. The workflow has not been exercised against deployed PostgreSQL/Neo4j or credentialed Stripe/PayPal sandboxes. Local active-user validation does not prove that a Stripe or PayPal customer belongs to the local user; no trusted customer mapping exists. The synchronous user deletion response also differs from the future operation-resource OpenAPI contract. Keep the Phase 5 user lifecycle and Phase 7 payment completion claims open pending deployed cleanup/retry evidence, provider ownership design, and sandbox runs.
+
 ## Verification run — 2026-09-29
 
 | Check | Result | Notes |
