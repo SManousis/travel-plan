@@ -1,6 +1,6 @@
 # Build, Security, and Data Fixes Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Restore the documented backend build and deny revoked access tokens at the gateway and every business-service boundary.
 
@@ -9,6 +9,8 @@
 **Tech Stack:** Java 21, Spring Boot 4.1, Spring MVC/WebFlux, Spring JDBC/Flyway, JUnit 5, Maven Wrapper.
 
 **Spec:** `docs/superpowers/specs/2026-09-30-build-security-data-fixes-design.md`
+
+**Execution note (2026-09-30):** The steps below are complete on `build-security-data-fixes`. The servlet validation clients use JDK `HttpClient` with explicit timeouts rather than the planned `RestClient`. Identity UUID/role persistence and lifecycle synchronization were added after tests exposed a deletion-revocation gap. Auth session persistence and the internal validation endpoint were committed together. Verification evidence is in `docs/audit/project-audit-2026-09-29.md`.
 
 ## Global Constraints
 
@@ -41,11 +43,11 @@
 
 **Produces:** valid `spring.autoconfigure`, `security.token-secret`, and `security.internal-service-token` configuration properties.
 
-- [ ] **Step 1: Capture the failures**
+- [x] **Step 1: Capture the failures**
 
 Run `./mvnw.cmd -B -ntp -pl user-service test`. Confirm the PowerShell wrapper fails before Maven runs. Run the cached Maven command directly and confirm Spring rejects the duplicate top-level `security` key.
 
-- [ ] **Step 2: Repair the wrapper**
+- [x] **Step 2: Repair the wrapper**
 
 Replace:
 
@@ -59,7 +61,7 @@ with:
 if ($null -eq (Get-Item $MAVEN_M2_PATH).Target) {
 ```
 
-- [ ] **Step 3: Repair user-service YAML**
+- [x] **Step 3: Repair user-service YAML**
 
 Move the datasource exclusions under the existing top-level `spring` mapping and retain one `security` mapping:
 
@@ -74,7 +76,7 @@ security:
   internal-service-token: ${AUTH_INTERNAL_SERVICE_TOKEN:change-me-internal}
 ```
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run `./mvnw.cmd -B -ntp -pl user-service test`; expect both startup tests to pass. Commit `mvnw.cmd` and the user-service YAML with message `fix: restore user service build`.
 
@@ -90,7 +92,7 @@ Run `./mvnw.cmd -B -ntp -pl user-service test`; expect both startup tests to pas
 
 **Produces:** `recordIssued(UUID, String, Instant)`, `isActive(UUID, Instant)`, `revoke(UUID, Instant)`, and `revokeSubject(String, Instant)`.
 
-- [ ] **Step 1: Write failing session-state tests**
+- [x] **Step 1: Write failing session-state tests**
 
 Add a two-token subject-revocation case:
 
@@ -103,11 +105,11 @@ assertNull(service.verify(first));
 assertNull(service.verify(second));
 ```
 
-- [ ] **Step 2: Implement `TokenSessionStore`**
+- [x] **Step 2: Implement `TokenSessionStore`**
 
 Use an optional `JdbcTemplate`. The JDBC path inserts `jti`, `subject`, and `expires_at` in `admin_sessions`; checks `revoked_at`/expiry on validation; and updates active rows during token/subject revocation. The fallback path uses `ConcurrentHashMap<UUID, Session>`. A missing database session must be denied.
 
-- [ ] **Step 3: Connect `TokenService` to the store**
+- [x] **Step 3: Connect `TokenService` to the store**
 
 After signing an issued token, call:
 
@@ -117,7 +119,7 @@ sessions.recordIssued(UUID.fromString(jti), subject, Instant.ofEpochSecond(expir
 
 Require `sessions.isActive` in `verify`; route `revoke` and `revokeSubject` through the store. Keep `verifyIgnoringRevocation` only to identify a token-specific session during logout.
 
-- [ ] **Step 4: Add the index, verify, and commit**
+- [x] **Step 4: Add the index, verify, and commit**
 
 Add:
 
@@ -139,11 +141,11 @@ Run `./mvnw.cmd -B -ntp -pl auth-service test`; expect all auth tests to pass. C
 
 **Produces:** `200 {subject, role, expiresAt}`, `401` for invalid/revoked tokens, and `403` for an incorrect service credential.
 
-- [ ] **Step 1: Write failing controller tests**
+- [x] **Step 1: Write failing controller tests**
 
 Use a known token secret and internal credential. Cover valid issued token, revoked token, and invalid internal credential.
 
-- [ ] **Step 2: Implement the endpoint**
+- [x] **Step 2: Implement the endpoint**
 
 ```java
 @PostMapping("/internal/token-validation")
@@ -156,7 +158,7 @@ ResponseEntity<?> validate(@RequestHeader(value = "Authorization", required = fa
 }
 ```
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Keep `/internal/**` excluded from normal bearer handling and do not add a gateway route. Run `./mvnw.cmd -B -ntp -pl auth-service test`; commit with `feat: expose internal token validation`.
 
@@ -175,13 +177,13 @@ Keep `/internal/**` excluded from normal bearer handling and do not add a gatewa
 
 **Produces:** `ACTIVE`, `DENIED`, or `UNAVAILABLE` without logging the token.
 
-- [ ] **Step 1: Write failing boundary tests**
+- [x] **Step 1: Write failing boundary tests**
 
 For a direct business-service request and a gateway request, use a local fake auth endpoint that responds `200` for active tokens, `401` for revoked tokens, and fails for unavailable auth. Assert `200`, `401`, and `503` respectively.
 
-- [ ] **Step 2: Implement servlet clients**
+- [x] **Step 2: Implement servlet clients**
 
-Each MVC service uses `RestClient` to post to `/internal/token-validation` after local HMAC/expiry/role checks:
+Each MVC service uses an HTTP client to post to `/internal/token-validation` after local HMAC/expiry/role checks:
 
 ```java
 client.post().uri("/internal/token-validation")
@@ -192,11 +194,11 @@ client.post().uri("/internal/token-validation")
 
 Map service `401/403` to `DENIED` and transport/5xx errors to `UNAVAILABLE`.
 
-- [ ] **Step 3: Implement the gateway client**
+- [x] **Step 3: Implement the gateway client**
 
 Use `WebClient` in the gateway `WebFilter` to call the same endpoint. Map denied responses to `401`, auth transport/5xx errors to `503`, and call `chain.filter(exchange)` only after `ACTIVE`.
 
-- [ ] **Step 4: Add configuration**
+- [x] **Step 4: Add configuration**
 
 Add to gateway, travel, and payment application YAML files:
 
@@ -209,7 +211,7 @@ security:
 
 Keep user-service’s equivalent keys singular. Add `AUTH_INTERNAL_SERVICE_TOKEN` to the gateway, travel, and payment Compose service environments.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run `./mvnw.cmd -B -ntp -pl api-gateway,user-service,travel-service,payment-service test`; expect every focused test to pass. Commit with `fix: enforce revoked tokens at api boundaries`.
 
@@ -222,11 +224,11 @@ Run `./mvnw.cmd -B -ntp -pl api-gateway,user-service,travel-service,payment-serv
 
 **Produces:** dated evidence replacing only the build and revocation findings.
 
-- [ ] **Step 1: Run backend verification**
+- [x] **Step 1: Run backend verification**
 
 Run `./mvnw.cmd -B -ntp verify`; expect all six reactor modules to finish with zero failures or errors.
 
-- [ ] **Step 2: Validate Compose overlays**
+- [x] **Step 2: Validate Compose overlays**
 
 Run:
 
@@ -238,7 +240,7 @@ docker compose -f infra/compose/compose.yml -f infra/compose/compose.scale.yml c
 
 Expect all commands to exit successfully.
 
-- [ ] **Step 3: Update and commit audit evidence**
+- [x] **Step 3: Update and commit audit evidence**
 
 Record exact verification output, retain all unrelated findings, and commit with `docs: record foundation remediation verification`.
 

@@ -6,6 +6,23 @@
 
 This audit began as a **static repository audit** of commit `e01053e` (`main`) and now includes the checks recorded below. I inspected source, tests, configuration, scripts, and documentation. I did not start a container deployment or run browser checks, provider sandbox calls, live security/trace/failover rehearsals, or Ansible. Findings distinguish source-level facts from runtime evidence that still needs collection.
 
+## Remediation follow-up — 2026-09-30
+
+The initial findings below describe the 2026-09-29 baseline. On branch `build-security-data-fixes`, the first remediation package closed the **backend build blocker** and the **access-token revocation gap at API boundaries**:
+
+- The PowerShell Maven Wrapper starts correctly with a normal `.m2` directory. The duplicate user-service `security` mapping and its startup dependency injection failure were corrected.
+- Auth now persists issued/revoked sessions through `admin_sessions` in the `infra` profile. A protected `/internal/token-validation` endpoint checks current session state. Gateway, user, travel, and payment services call it after local token checks; revoked tokens receive `401` and validation outages receive `503`.
+- Provisioned identity records now carry the user UUID, password hash, role, and enabled state in `auth_identities`. User deletion disables the identity and revokes its sessions; user email, role, or status updates synchronize the identity and revoke old sessions. The default profile retains an in-memory fallback for local/test runs.
+
+| Verification on 2026-09-30 | Result |
+|---|---|
+| `mvnw.cmd -B -ntp verify` | **Pass:** all six reactor modules succeeded; 54 tests, zero failures/errors/skips. |
+| Focused auth, gateway, and direct-service authorization tests | **Pass:** active, revoked, and auth-outage decisions; UUID/role provisioning, identity updates, subject revocation, and JDBC cross-instance session/identity cases. |
+| Auth Flyway chain against PostgreSQL-mode H2 | **Pass:** migrations V1–V3 applied, including the new identity table. H2 test setup defines a compatible `TIMESTAMPTZ` domain for the existing V1 migration. |
+| Base, secure, and scale `docker compose ... config --quiet` | **Pass:** each command exited 0. Docker warned that this host denied access to its user `config.json`. |
+
+This is code and local-test evidence, not a deployed PostgreSQL or multi-replica rehearsal. The 2026-09-29 baseline tables below are retained for traceability. **Still open:** process-local failed-login throttling, durable coordination between auth and user database updates, and the unrelated travel, payment, dashboard, CI/CD, deployment, and final-rehearsal findings. The project remains **not ready** to claim the mandatory scope complete.
+
 ## Verification run — 2026-09-29
 
 | Check | Result | Notes |
