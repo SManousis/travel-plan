@@ -48,6 +48,12 @@ On the same remediation branch, user deletion now records a durable stage in Pos
 
 This is **code and compile evidence only**. The workflow has not been exercised against deployed PostgreSQL/Neo4j or credentialed Stripe/PayPal sandboxes. Local active-user validation does not prove that a Stripe or PayPal customer belongs to the local user; no trusted customer mapping exists. The synchronous user deletion response also differs from the future operation-resource OpenAPI contract. Keep the Phase 5 user lifecycle and Phase 7 payment completion claims open pending deployed cleanup/retry evidence, provider ownership design, and sandbox runs.
 
+## Dashboard workflow follow-up — 2026-09-30
+
+On the same branch, the dashboard now presents user and traveler CRUD, destination and full travel itinerary CRUD, traveler participation, gateway CRUD, and payment-method connection, listing, label editing, and deletion through the implemented APIs. The app shell handles login, session expiry, and logout. A shared API client displays authorization, validation, and dependency errors; payment creation and deletion retain idempotency keys for unchanged retries. The responsive layout includes labels, keyboard focus states, and status messages.
+
+`npm --prefix admin-ui run build` passed on 2026-09-30, including TypeScript checking and the Vite production build. This is **source and build evidence only**. No browser walkthrough or deployed API exercise was performed for this change. The payment form accepts references created through an external provider flow; it does not provide provider tokenization, and no sandbox credentials or trusted provider-customer mapping are available. The Phase 8 browser completion claim remains unverified until the Chrome/Firefox walkthrough in `docs/audit/browser-checks.md` is recorded. The original dashboard finding below is retained as the baseline.
+
 ## Verification run — 2026-09-29
 
 | Check | Result | Notes |
