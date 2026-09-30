@@ -52,6 +52,11 @@ services:
       postgres: { condition: service_healthy }
     networks: [backend]
     expose: [8081, 9081]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9081/actuator/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
 
   user-service:
     build: ../../user-service
@@ -68,6 +73,11 @@ services:
       postgres: { condition: service_healthy }
     networks: [backend]
     expose: [8082, 9082]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9082/actuator/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
 
   travel-service:
     build: ../../travel-service
@@ -83,6 +93,11 @@ services:
       neo4j: { condition: service_healthy }
     networks: [backend]
     expose: [8083, 9083]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9083/actuator/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
 
   payment-service:
     build: ../../payment-service
@@ -101,6 +116,11 @@ services:
       postgres: { condition: service_healthy }
     networks: [backend]
     expose: [8084, 9084]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9084/actuator/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
 
   api-gateway:
     build: ../../api-gateway
@@ -114,17 +134,23 @@ services:
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}
       AUTH_INTERNAL_SERVICE_TOKEN: ${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}
     depends_on:
-      auth-service: { condition: service_started }
-      user-service: { condition: service_started }
-      travel-service: { condition: service_started }
-      payment-service: { condition: service_started }
+      auth-service: { condition: service_healthy }
+      user-service: { condition: service_healthy }
+      travel-service: { condition: service_healthy }
+      payment-service: { condition: service_healthy }
     networks: [backend]
     ports: ["127.0.0.1:8080:8080"]
     expose: [9080]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9080/actuator/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
 
   admin-ui:
     build: ../../admin-ui
-    depends_on: [api-gateway]
+    depends_on:
+      api-gateway: { condition: service_healthy }
     networks: [backend]
     ports: ["127.0.0.1:5173:8080"]
 

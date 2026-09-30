@@ -1,16 +1,2 @@
 ---
-- name: Deploy Travel Plan
-  hosts: travel_plan
-  become: false
-  vars:
-    app_dir: /opt/travel-plan
-  tasks:
-    - name: Ensure application directory exists
-      ansible.builtin.file: { path: "{{ app_dir }}", state: directory, mode: '0750' }
-    - name: Copy Compose files
-      ansible.builtin.copy: { src: "{{ playbook_dir }}/../compose/", dest: "{{ app_dir }}/compose/", mode: preserve }
-    - name: Start application stack
-      community.docker.docker_compose_v2:
-        project_src: "{{ app_dir }}"
-        files: [compose/compose.yml]
-        state: present
+- import_playbook: deploy.yml

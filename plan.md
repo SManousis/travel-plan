@@ -34,7 +34,7 @@
 - [x] Phase 7 — Payment methods and gateway integrations
 - [x] Phase 8 — Responsive Admin Dashboard
 - [x] Phase 9 — Request tracing and operational visibility
-- [x] Phase 10 — Automated deployment with Ansible
+- [ ] Phase 10 — Automated deployment with Ansible
 - [x] Phase 11 — Replicas, load balancing, and failure recovery
 - [x] Phase 12 — Security review and full audit rehearsal
 - [ ] Bonus A — Extended application and database documentation
@@ -135,10 +135,10 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `Jenkinsfile`; `sonar-project.properties`; `infra/compose/compose.ci.yml`; `.github/PULL_REQUEST_TEMPLATE.md`; `docs/development.md`; Java/UI test configuration.
 
-- [x] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings.
-- [x] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving.
+- [ ] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings. Compose services exist; Jenkins setup is not demonstrated.
+- [ ] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving. Source stages exist; UI unit tests are absent.
 - [ ] Check the selected SonarQube edition's PR/branch analysis capabilities. Document and demonstrate a supported per-PR analysis approach if native PR decoration is unavailable.
-- [x] Publish test and analysis results through Jenkins and define PR checks for failed tests and quality gates.
+- [ ] Publish test and analysis results through Jenkins and define PR checks for failed tests and quality gates. A live Jenkins run and Gitea branch protection remain to be recorded.
 - [ ] Configure the pipeline to deploy reviewed main-branch artifacts through Ansible once Phase 10 supplies the deployment playbook; PR validation must already work in this phase.
 - [x] Define descriptive branch/PR naming, Java/TypeScript naming conventions, reviewer expectations, and approval-before-merge rules in the PR template and development guide.
 - [ ] Add a dependency-update and vulnerability-review process; document how upgrades are tested and findings resolved.
@@ -260,14 +260,14 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/ansible/inventories/`; `infra/ansible/site.yml`; `infra/ansible/deploy.yml`; `infra/ansible/roles/`; `Jenkinsfile`; `docs/deployment.md`.
 
-- [x] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability.
-- [x] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output.
-- [x] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization.
-- [x] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints.
-- [x] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results.
-- [x] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
-- [x] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
-- [x] **Completion check:** Clean and repeat deployment procedures, rollback, secret handling, and readiness evidence are documented and wired to the reviewed main-branch pipeline.
+- [ ] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability. The current release playbook assumes a prepared Linux host.
+- [ ] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output. Release image and secret inputs are parameterized; resource/replica settings and Vault retrieval remain open.
+- [ ] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization. Live repeat-run behavior is unverified.
+- [ ] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints. SHA tags are wired; registry immutability and live rollback remain unverified.
+- [ ] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results. Source wiring exists; no live Jenkins run is recorded.
+- [ ] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
+- [ ] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
+- [ ] **Completion check:** Clean and repeat deployment procedures, rollback, secret handling, and readiness evidence are documented and wired to the reviewed main-branch pipeline.
 
 ## Phase 11 — Replicas, load balancing, and failure recovery
 

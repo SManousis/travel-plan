@@ -2,7 +2,7 @@
 
 - Recorded: 2026-09-30
 - Base: `e01053e` (`main`)
-- Implementation covered: through `52653a1`
+- Implementation covered: through the current branch tip
 - Integration status: pushed to Gitea; not merged into `main`.
 
 This branch addresses findings from the [2026-09-29 project audit](audit/project-audit-2026-09-29.md). The audit's original findings describe the baseline at `e01053e`; its 2026-09-30 follow-ups describe the branch changes.
@@ -17,6 +17,7 @@ This branch addresses findings from the [2026-09-29 project audit](audit/project
 | Payment data and providers | Added PostgreSQL-backed gateway and payment-method metadata in the infrastructure profile. Stripe and PayPal adapters now inspect supplied sandbox references and perform provider cleanup calls. Added pending, active, failed, and deletion-pending state handling, safe failure codes, idempotency, and concurrency controls. | `aab107c`, `a9cf6da`, `5e4f802`, `f2d3433` |
 | Cross-service user deletion | Persisted user-deletion progress and coordinated auth revocation, payment-method cleanup, travel participation cleanup, and traveler deletion. Added tombstones to prevent new connections or participation after cleanup begins. Pending provider work returns `202` instead of reporting completion. | `02a0b2c` |
 | Admin dashboard | Replaced the summary screen with user/traveler, destination/travel/itinerary, gateway, and payment-method workflows. Added a shared API client, login/logout and expiry handling, responsive forms, status/error messages, and retry-safe payment actions. | `52653a1` |
+| CI and release path | Added enforced UI lint and explicit Jenkins checks, main-branch Sonar analysis/gate, SHA-tagged image publication, a release Compose overlay, secure dashboard/API routing, and an Ansible playbook that pulls published images with required secrets and TLS inputs. Source verification is recorded below; live Jenkins and deployment proof remains open. | 2026-09-30 follow-up |
 
 The design and implementation plans for these changes are in [`docs/superpowers`](superpowers/). The dashboard uses the **implemented controller payloads**; some planned OpenAPI fields and operations are not yet available.
 
@@ -26,13 +27,14 @@ The design and implementation plans for these changes are in [`docs/superpowers`
 - Base, secure, and scale Compose configuration checks passed after the auth and travel changes. This confirms manifest resolution, not a running deployment.
 - The payment and cross-service deletion changes have code and compile evidence only. No credentialed Stripe/PayPal sandbox run or deployed PostgreSQL/Neo4j lifecycle run has been recorded.
 - `npm --prefix admin-ui run build` passed for the dashboard at `52653a1`, including TypeScript checking and a production Vite build. No Chrome/Firefox walkthrough or UI test run has been recorded for that change.
+- On 2026-09-30, full Maven verification (all six modules), UI lint/build, API contract lint, and release+secure Compose configuration passed locally. The Compose projection showed all six application images using the selected SHA tag and no application `build` contexts. These checks do not establish a running release. The Ansible CLI and configured Jenkins/Sonar/registry/deployment targets are unavailable locally.
 
 Exact results and limitations are in the [audit follow-ups](audit/project-audit-2026-09-29.md). Migration and legacy-data procedures are in [operations](operations.md).
 
 ## Remaining before the exercise audit
 
-1. Make Jenkins/SonarQube PR checks mandatory, establish UI lint and dependency review, and demonstrate that failed checks block merging.
-2. Publish versioned release images and make Ansible deploy those exact images with the secure TLS/Vault configuration. Record clean, repeat, and rollback deployment results.
+1. Configure Jenkins, SonarQube, a CI agent, and Gitea branch protection; demonstrate that failed PR checks block merging. UI lint and source pipeline wiring exist, while dependency review and native PR Sonar analysis remain open.
+2. Configure a registry and prepared Linux target; run the SHA-tagged image release and secure Ansible deployment, then record clean, repeat, and rollback results. Vault initialization and app-side secret retrieval remain open.
 3. Finish the remaining payment lifecycle/API decisions and verify Stripe and PayPal against sandboxes. Credentials and a trusted provider-customer-to-local-user mapping are not available yet, so provider ownership proof remains deferred.
 4. Run and record deployed user-deletion/retry, authorization/TLS, database persistence, tracing, load/failover, and Chrome/Firefox dashboard scenarios. The [browser checklist](audit/browser-checks.md) remains pending.
 5. Reconcile checked phase claims and older architecture/API documentation with the implementation and dated evidence. Phase 7 payment completion and final audit readiness are not established.
