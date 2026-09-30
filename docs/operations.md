@@ -32,4 +32,12 @@ The earlier travel-service kept stops, activities, accommodation, transport, and
 
 Do not treat a top-level-only node as a completed itinerary. The original in-memory component data cannot be recovered from Neo4j alone.
 
+## Upgrading legacy payment records
+
+Payment migration V1 stored methods without gateway IDs. The earlier controller also kept gateways and methods only in memory, so records that existed only in a running process cannot be reconstructed after restart. Before applying V2, back up the payments database and check for duplicate `(provider, provider_reference)` pairs with `SELECT provider, provider_reference, count(*) FROM payment_methods GROUP BY provider, provider_reference HAVING count(*) > 1`; reconcile duplicates before the new unique index is created.
+
+After V2, inspect `SELECT id, user_id, provider, provider_reference, status FROM payment_methods WHERE gateway_id IS NULL`. These rows remain in PostgreSQL, but payment-list/detail reads return `409 LEGACY_METHOD_REQUIRES_GATEWAY` while they are present. For each row, verify its owner, provider account, and reference outside this service, then create the appropriate gateway. If a trustworthy reference can be reconnected, record the old ID in the operator log, remove the backed-up legacy row, and create a new method through the admin API with a fresh UUID `Idempotency-Key`. Record the old-to-new ID mapping. Do not mark a legacy row `ACTIVE` by SQL without provider verification. Recheck that the `gateway_id IS NULL` query returns no rows before reopening payment reads.
+
+Configure the Stripe and PayPal sandbox credentials through deployment secrets before connecting or deleting methods. If a provider call fails, inspect the method's safe `status` and `failureCode`, resolve credentials/provider availability, then retry the same create key or deletion request. Do not copy provider references or credentials into tickets or logs.
+
 Run `scripts/load/replica-smoke.sh` with `compose.scale.yml` to record status/error counts during a 40-request authenticated read sample. Stop one replica and repeat; Docker DNS routes new connections to survivors. Stop all instances of one service to verify a controlled dependency failure, then restore it with Compose. Application services use bounded HTTP client timeouts and idempotency keys for retried writes; this local demonstration does not claim multi-host or database high availability.

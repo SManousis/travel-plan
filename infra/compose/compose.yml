@@ -91,6 +91,9 @@ services:
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
       AUTH_INTERNAL_SERVICE_TOKEN: "${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}"
       AUTH_SERVICE_URL: http://auth-service:8081
+      STRIPE_SANDBOX_SECRET_KEY: ${STRIPE_SANDBOX_SECRET_KEY:-}
+      PAYPAL_SANDBOX_CLIENT_ID: ${PAYPAL_SANDBOX_CLIENT_ID:-}
+      PAYPAL_SANDBOX_CLIENT_SECRET: ${PAYPAL_SANDBOX_CLIENT_SECRET:-}
     depends_on:
       postgres: { condition: service_healthy }
     networks: [backend]

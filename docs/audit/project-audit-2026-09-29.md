@@ -36,6 +36,12 @@ On the same branch, travel-service now uses Neo4j as its source of truth wheneve
 
 This closes the specific **process-local travel aggregate and partial graph persistence** finding in the `infra` profile at code and in-process graph-test level. It does not establish deployed Neo4j/replica behavior: Docker's engine was unavailable on this host. Existing top-level-only travel nodes lack the lost in-memory itinerary data and require the operator procedure in `docs/operations.md`. An unreconciled root makes both its detail request and the travel collection return `409 INCOMPLETE_LEGACY_TRAVEL`; the runbook requires all such roots to be reconstructed or explicitly quarantined before serving reads. The travel OpenAPI/domain mismatch, cross-service traveler deletion cleanup, and Phase 11 recovery/load evidence remain open. Baseline findings below retain their original wording for comparison.
 
+## Payment persistence follow-up — 2026-09-30
+
+On `build-security-data-fixes`, payment-service now has a PostgreSQL-backed store in the `infra` profile for gateways and payment methods. Migration V2 adds gateway relationships, lifecycle fields, and uniqueness constraints. New methods are saved as `PENDING` before provider inspection; Stripe and PayPal adapters now make sandbox HTTP requests to inspect supplied references and to detach/delete them. A method becomes `ACTIVE` only after a successful provider response. Failed provider work remains visible with a safe failure code, and payment APIs return `503` for unavailable storage/provider dependencies. The default profile keeps an in-memory metadata store, with the same provider verification requirement.
+
+This is **code and compile evidence only**. No Stripe or PayPal credentials were available, so neither provider flow has been demonstrated against a live sandbox. Existing V1 payment rows require the reconciliation procedure in `docs/operations.md` before payment-list reads resume. The current endpoints remain synchronous and do not yet implement the operation resources, default selection, Vault secret resolution, provider-customer-to-local-user ownership proof, user-deletion cleanup, or webhook decisions described in `docs/api/payments.yaml` and the unchecked Phase 7 tasks. The original 2026-09-29 findings below are retained as baseline evidence; Phase 7 is still **not complete**.
+
 ## Verification run — 2026-09-29
 
 | Check | Result | Notes |
