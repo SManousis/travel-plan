@@ -46,19 +46,8 @@ public class TokenService {
     }
 
     public Claims verify(String token) {
-        try {
-            String[] parts = token.split("\\.", -1);
-            if (parts.length != 2 || !MessageDigest.isEqual(sign(parts[0]), decoder.decode(parts[1]))) {
-                return null;
-            }
-            String[] values = new String(decoder.decode(parts[0]), StandardCharsets.UTF_8).split("\\|", -1);
-            if (values.length != 6 || !"travel-plan-auth".equals(values[2]) || !"travel-plan-admin".equals(values[3])) return null;
-            long expiresAt = Long.parseLong(values[4]);
-            if (expiresAt <= Instant.now().getEpochSecond() || !sessions.isActive(UUID.fromString(values[5]), Instant.now())) return null;
-            return new Claims(values[0], values[1], values[5], expiresAt);
-        } catch (RuntimeException exception) {
-            return null;
-        }
+        Claims claims = verifyIgnoringRevocation(token);
+        return claims != null && sessions.isActive(UUID.fromString(claims.jti()), Instant.now()) ? claims : null;
     }
 
     public void revoke(String token) {

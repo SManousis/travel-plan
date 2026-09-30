@@ -22,7 +22,7 @@ public class UserStore {
     public UserDomain.User create(String email, String first, String last, UserDomain.Role role) {
         if (users.values().stream().anyMatch(u -> u.email().equalsIgnoreCase(email))) throw new Conflict("EMAIL_EXISTS");
         UserDomain.User user = new UserDomain.User(UUID.randomUUID(), email.toLowerCase(Locale.ROOT), first, last, role, UserDomain.Status.ACTIVE, Instant.now());
-        try { provisioning.provision(user.email(), UUID.randomUUID().toString()+"-Initial9!"); } catch (RuntimeException ex) { throw new Conflict("AUTH_PROVISIONING_FAILED"); }
+        try { provisioning.provision(user.id(), user.email(), UUID.randomUUID().toString()+"-Initial9!", user.role().name()); } catch (RuntimeException ex) { throw new Conflict("AUTH_PROVISIONING_FAILED"); }
         users.put(user.id(), user); if (jdbc != null) jdbc.update("insert into users(id,email,first_name,last_name,role,status,created_at) values (?,?,?,?,?,?,?)",user.id(),user.email(),user.firstName(),user.lastName(),user.role().name(),user.status().name(),user.createdAt()); return user;
     }
     public List<UserDomain.User> list() { return users.values().stream().sorted(Comparator.comparing(UserDomain.User::createdAt).thenComparing(UserDomain.User::id)).toList(); }
@@ -31,7 +31,14 @@ public class UserStore {
         UserDomain.User old = get(id);
         if (email != null && users.values().stream().anyMatch(u -> !u.id().equals(id) && u.email().equalsIgnoreCase(email))) throw new Conflict("EMAIL_EXISTS");
         UserDomain.User next = new UserDomain.User(id, email == null ? old.email() : email.toLowerCase(Locale.ROOT), first == null ? old.firstName() : first, last == null ? old.lastName() : last, role == null ? old.role() : role, status == null ? old.status() : status, old.createdAt());
-        if (old.role() == UserDomain.Role.ADMIN && next.role() != UserDomain.Role.ADMIN && users.values().stream().filter(u -> u.role() == UserDomain.Role.ADMIN && u.status() == UserDomain.Status.ACTIVE).count() <= 1) throw new Conflict("LAST_ADMIN");
+        if (old.role() == UserDomain.Role.ADMIN && old.status() == UserDomain.Status.ACTIVE
+                && (next.role() != UserDomain.Role.ADMIN || next.status() != UserDomain.Status.ACTIVE)
+                && users.values().stream().filter(u -> u.role() == UserDomain.Role.ADMIN && u.status() == UserDomain.Status.ACTIVE).count() <= 1)
+            throw new Conflict("LAST_ADMIN");
+        if (!old.email().equals(next.email()) || old.role() != next.role() || old.status() != next.status()) {
+            try { provisioning.update(id, next.email(), next.role().name(), next.status() == UserDomain.Status.ACTIVE); }
+            catch (RuntimeException ex) { throw new Conflict("AUTH_UPDATE_FAILED"); }
+        }
         users.put(id, next); if (jdbc != null) jdbc.update("update users set email=?,first_name=?,last_name=?,role=?,status=? where id=?",next.email(),next.firstName(),next.lastName(),next.role().name(),next.status().name(),id); return next;
     }
     public void delete(UUID id) { UserDomain.User u = get(id); if (u.role() == UserDomain.Role.ADMIN && u.status() == UserDomain.Status.ACTIVE && users.values().stream().filter(x -> x.role() == UserDomain.Role.ADMIN && x.status() == UserDomain.Status.ACTIVE).count() <= 1) throw new Conflict("LAST_ADMIN"); revocations.revoke(id); users.put(id, new UserDomain.User(u.id(), u.email(), u.firstName(), u.lastName(), u.role(), UserDomain.Status.DISABLED, u.createdAt())); if (jdbc != null) jdbc.update("update users set status=? where id=?","DISABLED",id); travelers.values().removeIf(t -> t.userId().equals(id)); }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.*;
 import java.util.UUID;
 
 class TokenServiceTest {
@@ -55,6 +56,15 @@ class TokenServiceTest {
         new TokenService(SECRET, 60, new TokenSessionStore(jdbc)).revokeSubject("user-1");
 
         assertNull(new TokenService(SECRET, 60, new TokenSessionStore(jdbc)).verify(token));
+    }
+
+    @Test void sessionStoreFailureIsNotReportedAsInvalidCredentials() {
+        TokenSessionStore sessions = mock(TokenSessionStore.class);
+        TokenService service = new TokenService(SECRET, 60, sessions);
+        String token = service.issue("admin", "ADMIN").value();
+        when(sessions.isActive(any(), any())).thenThrow(new IllegalStateException("database offline"));
+
+        assertThrows(IllegalStateException.class, () -> service.verify(token));
     }
 
     private JdbcTemplate sessionDatabase() {
