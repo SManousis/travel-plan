@@ -81,13 +81,13 @@ public final class PaymentController {
         ProviderAdapter adapter = adapter(attempt.method().provider());
         try {
             var result = adapter.connect(attempt.method().providerReference(), idempotencyKey);
-            Method connected = store.completeConnect(attempt.method().id(), result.displayMetadata());
+            Method connected = store.completeConnect(attempt.method(), result.displayMetadata());
             return ResponseEntity.status(attempt.created() ? HttpStatus.CREATED : HttpStatus.OK).body(view(connected));
         } catch (ProviderAdapter.Rejected ex) {
-            store.failConnect(attempt.method().id(), ex.code);
+            store.failConnect(attempt.method(), ex.code);
             throw ex;
         } catch (ProviderAdapter.Unavailable ex) {
-            store.failConnect(attempt.method().id(), ex.code);
+            store.failConnect(attempt.method(), ex.code);
             throw ex;
         }
     }
@@ -102,21 +102,22 @@ public final class PaymentController {
 
     @DeleteMapping("/api/payment-methods/{id}")
     ResponseEntity<Void> deleteMethod(@PathVariable UUID id, @RequestHeader("Idempotency-Key") UUID key) {
-        Method method = store.method(id);
-        if (!store.beginDelete(id)) return ResponseEntity.accepted().build();
+        var attempt = store.beginDelete(id);
+        if (!attempt.shouldDetach()) return ResponseEntity.accepted().build();
+        Method method = attempt.method();
         if ("CONNECT".equals(method.failureStage()) && "INVALID_PROVIDER_REFERENCE".equals(method.failureCode())) {
-            store.finishDelete(id);
+            store.finishDelete(method);
             return ResponseEntity.noContent().build();
         }
         try {
             adapter(method.provider()).detach(method.providerReference(), key.toString());
-            store.finishDelete(id);
+            store.finishDelete(method);
             return ResponseEntity.noContent().build();
         } catch (ProviderAdapter.Rejected ex) {
-            store.failDelete(id, ex.code);
+            store.failDelete(method, ex.code);
             throw ex;
         } catch (ProviderAdapter.Unavailable ex) {
-            store.failDelete(id, ex.code);
+            store.failDelete(method, ex.code);
             throw ex;
         }
     }

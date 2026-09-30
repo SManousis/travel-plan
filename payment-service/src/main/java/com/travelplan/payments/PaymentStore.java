@@ -1,6 +1,7 @@
 package com.travelplan.payments;
 
 import com.travelplan.payments.PaymentDomain.ConnectAttempt;
+import com.travelplan.payments.PaymentDomain.DeleteAttempt;
 import com.travelplan.payments.PaymentDomain.Conflict;
 import com.travelplan.payments.PaymentDomain.Gateway;
 import com.travelplan.payments.PaymentDomain.Method;
@@ -163,56 +164,72 @@ final class PaymentStore {
                 throw new Conflict("PAYMENT_METHOD_EXISTS");
             }
         } else localMethods.put(pending.id(), pending);
-        return new ConnectAttempt(pending, true, true);
+        return new ConnectAttempt(jdbc == null ? pending : method(pending.id()), true, true);
     }
 
-    Method completeConnect(UUID id, String displayMetadata) {
-        Method old = method(id);
+    Method completeConnect(Method claim, String displayMetadata) {
         if (jdbc != null) {
             int changed = jdbc.update("UPDATE payment_methods SET status='ACTIVE',display_metadata=?,"
                     + "failure_code=NULL,failure_stage=NULL,updated_at=CURRENT_TIMESTAMP "
-                    + "WHERE id=? AND status='PENDING'", displayMetadata, id);
+                    + "WHERE id=? AND status='PENDING' AND updated_at=?",
+                    displayMetadata, claim.id(), Timestamp.from(claim.updatedAt()));
             if (changed != 1) throw new Conflict("METHOD_STATE_CHANGED");
+        } else {
+            Method current = method(claim.id());
+            if (!"PENDING".equals(current.status()) || !current.updatedAt().equals(claim.updatedAt()))
+                throw new Conflict("METHOD_STATE_CHANGED");
+            localMethods.put(claim.id(), withState(current, "ACTIVE", displayMetadata, null, null));
         }
-        else localMethods.put(id, withState(old, "ACTIVE", displayMetadata, null, null));
-        return method(id);
+        return method(claim.id());
     }
 
-    void failConnect(UUID id, String code) { fail(id, code, "CONNECT", "PENDING"); }
+    void failConnect(Method claim, String code) { fail(claim, code, "CONNECT", "PENDING"); }
 
-    synchronized boolean beginDelete(UUID id) {
+    synchronized DeleteAttempt beginDelete(UUID id) {
         Method old = method(id);
         if ("PENDING".equals(old.status())) throw new Conflict("METHOD_CONNECTION_IN_PROGRESS");
         if ("DELETION_PENDING".equals(old.status())) {
-            if (jdbc != null) return jdbc.update("UPDATE payment_methods SET updated_at=CURRENT_TIMESTAMP "
-                    + "WHERE id=? AND status='DELETION_PENDING' "
-                    + "AND updated_at < CURRENT_TIMESTAMP - INTERVAL '30 seconds'", id) == 1;
-            if (old.updatedAt().isAfter(Instant.now().minusSeconds(30))) return false;
-            localMethods.put(id, withState(old, "DELETION_PENDING", old.displayMetadata(), null, null));
-            return true;
+            if (jdbc != null) {
+                boolean claimed = jdbc.update("UPDATE payment_methods SET updated_at=CURRENT_TIMESTAMP "
+                        + "WHERE id=? AND status='DELETION_PENDING' "
+                        + "AND updated_at < CURRENT_TIMESTAMP - INTERVAL '30 seconds'", id) == 1;
+                return new DeleteAttempt(method(id), claimed);
+            }
+            if (old.updatedAt().isAfter(Instant.now().minusSeconds(30))) return new DeleteAttempt(old, false);
+            Method claimed = withState(old, "DELETION_PENDING", old.displayMetadata(),
+                    old.failureCode(), old.failureStage());
+            localMethods.put(id, claimed);
+            return new DeleteAttempt(claimed, true);
         }
         if (jdbc != null) {
-            int changed = jdbc.update("UPDATE payment_methods SET status='DELETION_PENDING',failure_code=NULL,"
-                    + "failure_stage=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=?",
+            int changed = jdbc.update("UPDATE payment_methods SET status='DELETION_PENDING',"
+                    + "updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=?",
                     id, old.status());
             if (changed == 0) throw new Conflict("METHOD_STATE_CHANGED");
-            return true;
+            return new DeleteAttempt(method(id), true);
         }
-        localMethods.put(id, withState(old, "DELETION_PENDING", old.displayMetadata(), null, null));
-        return true;
+        Method claimed = withState(old, "DELETION_PENDING", old.displayMetadata(),
+                old.failureCode(), old.failureStage());
+        localMethods.put(id, claimed);
+        return new DeleteAttempt(claimed, true);
     }
 
-    void finishDelete(UUID id) {
+    void finishDelete(Method claim) {
         if (jdbc != null) {
-            if (jdbc.update("DELETE FROM payment_methods WHERE id=? AND status='DELETION_PENDING'", id) == 0) {
-                try { method(id); } catch (NotFound ignored) { return; }
+            if (jdbc.update("DELETE FROM payment_methods WHERE id=? AND status='DELETION_PENDING' "
+                    + "AND updated_at=?", claim.id(), Timestamp.from(claim.updatedAt())) == 0) {
+                try { method(claim.id()); } catch (NotFound ignored) { return; }
                 throw new Conflict("METHOD_STATE_CHANGED");
             }
+        } else {
+            Method current = method(claim.id());
+            if (!"DELETION_PENDING".equals(current.status()) || !current.updatedAt().equals(claim.updatedAt()))
+                throw new Conflict("METHOD_STATE_CHANGED");
+            localMethods.remove(claim.id());
         }
-        else localMethods.remove(id);
     }
 
-    void failDelete(UUID id, String code) { fail(id, code, "DELETE", "DELETION_PENDING"); }
+    void failDelete(Method claim, String code) { fail(claim, code, "DELETE", "DELETION_PENDING"); }
 
     Method updateLabel(UUID id, String label) {
         Method old = method(id);
@@ -229,12 +246,15 @@ final class PaymentStore {
         return method(id);
     }
 
-    private void fail(UUID id, String code, String stage, String expectedStatus) {
+    private void fail(Method claim, String code, String stage, String expectedStatus) {
         if (jdbc != null) jdbc.update("UPDATE payment_methods SET status='FAILED',failure_code=?,failure_stage=?,"
-                + "updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=?", code, stage, id, expectedStatus);
+                + "updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=? AND updated_at=?",
+                code, stage, claim.id(), expectedStatus, Timestamp.from(claim.updatedAt()));
         else {
-            Method old = method(id);
-            localMethods.put(id, withState(old, "FAILED", old.displayMetadata(), code, stage));
+            Method current;
+            try { current = method(claim.id()); } catch (NotFound ignored) { return; }
+            if (expectedStatus.equals(current.status()) && current.updatedAt().equals(claim.updatedAt()))
+                localMethods.put(claim.id(), withState(current, "FAILED", current.displayMetadata(), code, stage));
         }
     }
 

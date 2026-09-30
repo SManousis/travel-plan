@@ -14,6 +14,7 @@ final class PaymentDomain {
                   Instant updatedAt) {}
 
     record ConnectAttempt(Method method, boolean shouldInspect, boolean created) {}
+    record DeleteAttempt(Method method, boolean shouldDetach) {}
 
     static final class NotFound extends RuntimeException {}
 
