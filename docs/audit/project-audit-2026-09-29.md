@@ -22,7 +22,19 @@ The initial findings below describe the 2026-09-29 baseline. On branch `build-se
 | Auth infra transaction wiring and rollback | **Pass:** the infra profile supplies JDBC transaction management; a failed identity/session operation rolls back the identity update. |
 | Base, secure, and scale `docker compose ... config --quiet` | **Pass:** each command exited 0. Docker warned that this host denied access to its user `config.json`. |
 
-This is code and local-test evidence, not a deployed PostgreSQL or multi-replica rehearsal. Existing users require the credential reset and identity reconciliation procedure in `docs/operations.md` because their prior auth password hashes were never persisted. The 2026-09-29 baseline tables below are retained for traceability. **Still open:** process-local failed-login throttling, durable coordination between auth and user database updates, an end-user password-change flow, and the unrelated travel, payment, dashboard, CI/CD, deployment, and final-rehearsal findings. The project remains **not ready** to claim the mandatory scope complete.
+This is code and local-test evidence, not a deployed PostgreSQL or multi-replica rehearsal. Existing users require the credential reset and identity reconciliation procedure in `docs/operations.md` because their prior auth password hashes were never persisted. The 2026-09-29 baseline tables below are retained for traceability. **Still open:** process-local failed-login throttling, durable coordination between auth and user database updates, an end-user password-change flow, and the payment, dashboard, CI/CD, deployment, and final-rehearsal findings. The travel finding has a separate follow-up below. The project remains **not ready** to claim the mandatory scope complete.
+
+## Travel persistence follow-up — 2026-09-30
+
+On the same branch, travel-service now uses Neo4j as its source of truth whenever the `infra` profile provides a driver. Destination CRUD, complete travel itineraries, and participation are stored and read through graph transactions. Travel deletion removes owned itinerary and participation nodes while preserving shared destinations. The default profile retains its in-memory store for local runs.
+
+| Verification on 2026-09-30 | Result |
+|---|---|
+| `mvnw.cmd -B -ntp verify` | **Pass:** all six reactor modules succeeded; 61 tests, zero failures/errors/skips. |
+| In-process Neo4j lifecycle tests | **Pass:** four tests cover complete itinerary reads across store instances, updates and response ordering, participant idempotence and current-state update responses, destination protection, owned-node cleanup, write rollback, and explicit rejection of top-level-only legacy travel nodes. |
+| Base, secure, and scale `docker compose ... config --quiet` | **Pass:** all three exited 0; Docker warned that this host denied access to its user `config.json`. |
+
+This closes the specific **process-local travel aggregate and partial graph persistence** finding in the `infra` profile at code and in-process graph-test level. It does not establish deployed Neo4j/replica behavior: Docker's engine was unavailable on this host. Existing top-level-only travel nodes lack the lost in-memory itinerary data and require the operator procedure in `docs/operations.md`. An unreconciled root makes both its detail request and the travel collection return `409 INCOMPLETE_LEGACY_TRAVEL`; the runbook requires all such roots to be reconstructed or explicitly quarantined before serving reads. The travel OpenAPI/domain mismatch, cross-service traveler deletion cleanup, and Phase 11 recovery/load evidence remain open. Baseline findings below retain their original wording for comparison.
 
 ## Verification run — 2026-09-29
 

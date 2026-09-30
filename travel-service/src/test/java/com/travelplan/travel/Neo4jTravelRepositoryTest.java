@@ -72,6 +72,7 @@ class Neo4jTravelRepositoryTest {
 
         var updated = second.update(created.id(), "Updated trip", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 4),
                 List.of(secondStop, firstStop), List.of(), List.of(stay), List.of());
+        assertThat(updated.stops()).containsExactly(firstStop, secondStop);
         assertThat(store().travel(created.id()).name()).isEqualTo("Updated trip");
         assertThat(updated.travelerIds()).containsExactly(traveler);
         assertThat(store().travel(created.id()).activities()).isEmpty();
@@ -91,6 +92,25 @@ class Neo4jTravelRepositoryTest {
         }
     }
 
+    @Test void updateReturnsParticipantsCommittedBeforeItsRootLock() {
+        TravelStore store = store();
+        var destination = store.createDestination("Lisbon", "PT");
+        var stop = new TravelDomain.Stop(UUID.randomUUID(), destination.id(), 0, null, null);
+        var created = store.save("Original", LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 2),
+                List.of(stop), List.of(), List.of(), List.of());
+        var staleSnapshot = store.travel(created.id());
+        UUID traveler = UUID.randomUUID();
+        store.addParticipant(created.id(), traveler);
+
+        var replacement = new TravelDomain.Travel(created.id(), "Updated", created.startDate(), created.endDate(),
+                created.durationDays(), created.stops(), created.activities(), created.accommodations(),
+                created.transports(), staleSnapshot.travelerIds(), created.createdAt());
+        var response = new Neo4jTravelRepository(driver).update(replacement);
+
+        assertThat(response.travelerIds()).containsExactly(traveler);
+        assertThat(store.travel(created.id()).travelerIds()).containsExactly(traveler);
+    }
+
     @Test void failedAggregateWriteRollsBackItsTravelNode() {
         UUID travelId = UUID.randomUUID();
         var missingStop = new TravelDomain.Stop(UUID.randomUUID(), UUID.randomUUID(), 0, null, null);
@@ -107,6 +127,10 @@ class Neo4jTravelRepositoryTest {
 
     @Test void topLevelOnlyLegacyTravelIsNotReturnedAsACompleteItinerary() {
         TravelStore store = store();
+        var destination = store.createDestination("Oslo", "NO");
+        var stop = new TravelDomain.Stop(UUID.randomUUID(), destination.id(), 0, null, null);
+        var complete = store.save("Complete", LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 2),
+                List.of(stop), List.of(), List.of(), List.of());
         UUID id = UUID.randomUUID();
         try (var session = driver.session()) {
             session.run("CREATE (t:Travel {id:$id, name:'Legacy', startDate:'2026-12-01', "
@@ -115,6 +139,13 @@ class Neo4jTravelRepositoryTest {
         }
         TravelStore.Conflict error = assertThrows(TravelStore.Conflict.class, () -> store.travel(id));
         assertThat(error.code).isEqualTo("INCOMPLETE_LEGACY_TRAVEL");
+        assertThat(assertThrows(TravelStore.Conflict.class, store::travels).code)
+                .isEqualTo("INCOMPLETE_LEGACY_TRAVEL");
+        try (var session = driver.session()) {
+            session.run("MATCH (t:Travel {id:$id}) REMOVE t:Travel SET t:LegacyTravelNeedsReview",
+                    java.util.Map.of("id", id.toString())).consume();
+        }
+        assertThat(store.travels()).extracting(TravelDomain.Travel::id).containsExactly(complete.id());
     }
 
     private static TravelStore store() {

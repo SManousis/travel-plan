@@ -79,7 +79,7 @@ public class TravelStore {
     public Travel save(String name, LocalDate start, LocalDate end, List<Stop> stops,
                        List<Activity> activities, List<Accommodation> stays, List<Transport> transports) {
         validate(start, end, stops, activities, stays, transports);
-        Travel result = new Travel(UUID.randomUUID(), name, start, end, duration(start, end), List.copyOf(stops),
+        Travel result = new Travel(UUID.randomUUID(), name, start, end, duration(start, end), orderedStops(stops),
                 List.copyOf(activities), List.copyOf(stays), List.copyOf(transports), Set.of(), Instant.now());
         if (graph != null) return graph.save(result);
         travels.put(result.id(), result);
@@ -90,7 +90,7 @@ public class TravelStore {
                          List<Activity> activities, List<Accommodation> stays, List<Transport> transports) {
         Travel old = travel(id);
         validate(start, end, stops, activities, stays, transports);
-        Travel result = new Travel(id, name, start, end, duration(start, end), List.copyOf(stops),
+        Travel result = new Travel(id, name, start, end, duration(start, end), orderedStops(stops),
                 List.copyOf(activities), List.copyOf(stays), List.copyOf(transports), old.travelerIds(), old.createdAt());
         if (graph != null) return graph.update(result);
         travels.put(id, result);
@@ -124,6 +124,10 @@ public class TravelStore {
     private static Travel withTravelers(Travel old, Set<UUID> ids) {
         return new Travel(old.id(), old.name(), old.startDate(), old.endDate(), old.durationDays(), old.stops(),
                 old.activities(), old.accommodations(), old.transports(), Set.copyOf(ids), old.createdAt());
+    }
+
+    private static List<Stop> orderedStops(List<Stop> stops) {
+        return stops.stream().sorted(Comparator.comparingInt(Stop::position)).toList();
     }
 
     private static long duration(LocalDate start, LocalDate end) { return start.datesUntil(end.plusDays(1)).count(); }

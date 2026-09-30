@@ -170,7 +170,8 @@ final class Neo4jTravelRepository {
                 tx.run("MATCH (t:Travel {id:$id}) SET t.name=$name, t.startDate=$start, t.endDate=$end, "
                                 + "t.durationDays=$duration", rootProperties(travel)).consume();
                 createItinerary(tx, travel);
-                return travel;
+                return travel(tx.run("MATCH (t:Travel {id:$id})" + PROJECTION,
+                        Map.of("id", travel.id().toString())).single());
             });
         }
     }
