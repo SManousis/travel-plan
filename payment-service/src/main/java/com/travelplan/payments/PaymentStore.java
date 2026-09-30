@@ -61,7 +61,7 @@ final class PaymentStore {
         return result;
     }
 
-    Gateway updateGateway(UUID id, String provider, String displayName) {
+    synchronized Gateway updateGateway(UUID id, String provider, String displayName) {
         Gateway old = gateway(id);
         if (!old.provider().equals(provider)) throw new Conflict("GATEWAY_PROVIDER_IMMUTABLE");
         Gateway result = new Gateway(id, old.provider(), displayName, old.enabled(), old.createdAt());
@@ -167,7 +167,7 @@ final class PaymentStore {
         return new ConnectAttempt(jdbc == null ? pending : method(pending.id()), true, true);
     }
 
-    Method completeConnect(Method claim, String displayMetadata) {
+    synchronized Method completeConnect(Method claim, String displayMetadata) {
         if (jdbc != null) {
             int changed = jdbc.update("UPDATE payment_methods SET status='ACTIVE',display_metadata=?,"
                     + "failure_code=NULL,failure_stage=NULL,updated_at=CURRENT_TIMESTAMP "
@@ -214,7 +214,7 @@ final class PaymentStore {
         return new DeleteAttempt(claimed, true);
     }
 
-    void finishDelete(Method claim) {
+    synchronized void finishDelete(Method claim) {
         if (jdbc != null) {
             if (jdbc.update("DELETE FROM payment_methods WHERE id=? AND status='DELETION_PENDING' "
                     + "AND updated_at=?", claim.id(), Timestamp.from(claim.updatedAt())) == 0) {
@@ -231,7 +231,7 @@ final class PaymentStore {
 
     void failDelete(Method claim, String code) { fail(claim, code, "DELETE", "DELETION_PENDING"); }
 
-    Method updateLabel(UUID id, String label) {
+    synchronized Method updateLabel(UUID id, String label) {
         Method old = method(id);
         if ("PENDING".equals(old.status()) || "DELETION_PENDING".equals(old.status()) || "FAILED".equals(old.status())
                 && "DELETE".equals(old.failureStage())) throw new Conflict("METHOD_DELETION_IN_PROGRESS");
@@ -246,7 +246,7 @@ final class PaymentStore {
         return method(id);
     }
 
-    private void fail(Method claim, String code, String stage, String expectedStatus) {
+    private synchronized void fail(Method claim, String code, String stage, String expectedStatus) {
         if (jdbc != null) jdbc.update("UPDATE payment_methods SET status='FAILED',failure_code=?,failure_stage=?,"
                 + "updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=? AND updated_at=?",
                 code, stage, claim.id(), expectedStatus, Timestamp.from(claim.updatedAt()));
