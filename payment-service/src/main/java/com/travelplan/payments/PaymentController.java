@@ -101,13 +101,17 @@ public final class PaymentController {
     }
 
     @DeleteMapping("/api/payment-methods/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    void deleteMethod(@PathVariable UUID id, @RequestHeader("Idempotency-Key") UUID key) {
+    ResponseEntity<Void> deleteMethod(@PathVariable UUID id, @RequestHeader("Idempotency-Key") UUID key) {
         Method method = store.method(id);
-        store.beginDelete(id);
+        if (!store.beginDelete(id)) return ResponseEntity.accepted().build();
+        if ("CONNECT".equals(method.failureStage()) && "INVALID_PROVIDER_REFERENCE".equals(method.failureCode())) {
+            store.finishDelete(id);
+            return ResponseEntity.noContent().build();
+        }
         try {
             adapter(method.provider()).detach(method.providerReference(), key.toString());
             store.finishDelete(id);
+            return ResponseEntity.noContent().build();
         } catch (ProviderAdapter.Rejected ex) {
             store.failDelete(id, ex.code);
             throw ex;
@@ -136,8 +140,8 @@ public final class PaymentController {
     }
 
     private static String requestHash(MethodWrite body) {
-        String canonical = body.userId() + "\n" + body.gatewayId() + "\n" + body.providerReference()
-                + "\n" + body.displayLabel();
+        String canonical = canonicalField(body.userId().toString()) + canonicalField(body.gatewayId().toString())
+                + canonicalField(body.providerReference()) + canonicalField(body.displayLabel());
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(canonical.getBytes(StandardCharsets.UTF_8)));
@@ -145,6 +149,8 @@ public final class PaymentController {
             throw new IllegalStateException(ex);
         }
     }
+
+    private static String canonicalField(String value) { return value.length() + ":" + value; }
 
     @ExceptionHandler(NotFound.class)
     ResponseEntity<Error> missing() {

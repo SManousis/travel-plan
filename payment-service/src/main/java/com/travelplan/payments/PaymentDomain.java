@@ -10,7 +10,8 @@ final class PaymentDomain {
 
     record Method(UUID id, UUID userId, UUID gatewayId, String provider, String providerReference,
                   String displayLabel, String status, String displayMetadata, String failureCode,
-                  String failureStage, String idempotencyKey, String requestHash, Instant createdAt) {}
+                  String failureStage, String idempotencyKey, String requestHash, Instant createdAt,
+                  Instant updatedAt) {}
 
     record ConnectAttempt(Method method, boolean shouldInspect, boolean created) {}
 

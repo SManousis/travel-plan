@@ -44,7 +44,7 @@ public final class PayPalAdapter implements ProviderAdapter {
         var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + "/v3/vault/payment-tokens/" + reference))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + accessToken())
                 .DELETE().build());
-        if (response.statusCode() == 404) return;
+        if (response.statusCode() == 404) throw new Rejected("PROVIDER_REFERENCE_NOT_FOUND");
         SandboxHttp.requireSuccess(response.statusCode());
     }
 

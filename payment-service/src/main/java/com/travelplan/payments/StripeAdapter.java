@@ -41,7 +41,7 @@ public final class StripeAdapter implements ProviderAdapter {
         var inspected = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + reference))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + key)
                 .header("Accept", "application/json").GET().build());
-        if (inspected.statusCode() == 404) return;
+        if (inspected.statusCode() == 404) throw new Rejected("PROVIDER_REFERENCE_NOT_FOUND");
         SandboxHttp.requireSuccess(inspected.statusCode());
         var body = SandboxHttp.json(inspected.body());
         if (!reference.equals(body.path("id").asString()) || !body.path("livemode").isBoolean()
