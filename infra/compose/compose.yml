@@ -44,6 +44,7 @@ services:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
       SPRING_PROFILES_ACTIVE: infra
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-change-me-auth}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin}
@@ -64,6 +65,7 @@ services:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
       SPRING_PROFILES_ACTIVE: infra
+      USERS_DB_PASSWORD: ${USERS_DB_PASSWORD:-change-me-users}
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
       AUTH_INTERNAL_SERVICE_TOKEN: "${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}"
       PAYMENT_SERVICE_URL: http://payment-service:8084
@@ -105,6 +107,7 @@ services:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_ADDRESS: 0.0.0.0
       SPRING_PROFILES_ACTIVE: infra
+      PAYMENTS_DB_PASSWORD: ${PAYMENTS_DB_PASSWORD:-change-me-payments}
       AUTH_TOKEN_SECRET: "${AUTH_TOKEN_SECRET:-replace-with-at-least-32-random-characters}"
       AUTH_INTERNAL_SERVICE_TOKEN: "${AUTH_INTERNAL_SERVICE_TOKEN:-change-me-internal}"
       USER_SERVICE_URL: http://user-service:8082

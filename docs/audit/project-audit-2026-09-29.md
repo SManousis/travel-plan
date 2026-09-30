@@ -4,7 +4,13 @@
 
 **Status: not ready to claim the mandatory project scope is complete.** The repository has a useful microservice skeleton, API contracts, infrastructure configuration, and some focused backend tests. However, multiple production-critical requirements are absent or are contradicted by the implementation. The roadmap marks Phases 7, 8, and 10–12 complete even though source and evidence do not support those claims.
 
-This audit began as a **static repository audit** of commit `e01053e` (`main`) and now includes the checks recorded below. I inspected source, tests, configuration, scripts, and documentation. I did not start a container deployment or run browser checks, provider sandbox calls, live security/trace/failover rehearsals, or Ansible. Findings distinguish source-level facts from runtime evidence that still needs collection.
+This audit began as a **static repository audit** of commit `e01053e` (`main`) and now includes dated follow-ups. The baseline inspection did not start containers or perform browser, provider, trace, failover, or Ansible runs. The 2026-09-30 local runtime follow-up below records the checks completed since then.
+
+## Local runtime follow-up — 2026-09-30
+
+An isolated Docker Compose project with synthetic credentials reached a healthy stack after fixes to PostgreSQL initialization, JDBC password injection, Flyway startup, and user/traveler timestamp binding. The API lifecycle smoke passed login, authorization denial, CRUD creation, persistence through a full Java-service and gateway restart, cross-service deletion cleanup, logout, and token revocation. A limited in-app browser walkthrough passed login, user create/edit, traveler create, travel/payment screen reads, sign out, and bad-password feedback. The complete Maven reactor passed 62 tests; dashboard/API lint and build, npm audits, Compose overlays, and Ansible syntax/lint also passed. Exact commands, failures, fixes, and limits are in [the runtime evidence record](runtime-verification-2026-09-30.md).
+
+Two new runtime findings remain: after backend-only restarts the gateway kept a stale user-service address and returned 500 until it restarted; the gateway logged a supplied request ID but the downstream user-service did not. Provider sandboxes, live Jenkins/Sonar/registry/deployment, TLS/Vault, replica recovery, and the Chrome/Firefox width matrix still need evidence. The baseline findings below are retained for comparison.
 
 ## Remediation follow-up — 2026-09-30
 

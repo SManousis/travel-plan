@@ -18,6 +18,7 @@ This branch addresses findings from the [2026-09-29 project audit](audit/project
 | Cross-service user deletion | Persisted user-deletion progress and coordinated auth revocation, payment-method cleanup, travel participation cleanup, and traveler deletion. Added tombstones to prevent new connections or participation after cleanup begins. Pending provider work returns `202` instead of reporting completion. | `02a0b2c` |
 | Admin dashboard | Replaced the summary screen with user/traveler, destination/travel/itinerary, gateway, and payment-method workflows. Added a shared API client, login/logout and expiry handling, responsive forms, status/error messages, and retry-safe payment actions. | `52653a1` |
 | CI and release path | Added enforced UI lint and explicit Jenkins checks, main-branch Sonar analysis/gate, SHA-tagged image publication, a release Compose overlay, secure dashboard/API routing, and an Ansible playbook that pulls published images with required secrets and TLS inputs. Source verification is recorded below; live Jenkins and deployment proof remains open. | 2026-09-30 follow-up |
+| Local runtime fixes | Corrected fresh PostgreSQL role/database initialization, passed database passwords to the JDBC services, enabled Flyway startup, and fixed PostgreSQL timestamp binding for user/traveler creation. Added a focused regression test and storage-error logging. | 2026-09-30 runtime follow-up |
 
 The design and implementation plans for these changes are in [`docs/superpowers`](superpowers/). The dashboard uses the **implemented controller payloads**; some planned OpenAPI fields and operations are not yet available.
 
@@ -30,6 +31,8 @@ The design and implementation plans for these changes are in [`docs/superpowers`
 - On 2026-09-30, full Maven verification (all six modules), UI lint/build, API contract lint, and release+secure Compose configuration passed locally. The Compose projection showed all six application images using the selected SHA tag and no application `build` contexts. These checks do not establish a running release. The Ansible CLI and configured Jenkins/Sonar/registry/deployment targets are unavailable locally.
 
 Exact results and limitations are in the [audit follow-ups](audit/project-audit-2026-09-29.md). Migration and legacy-data procedures are in [operations](operations.md).
+
+A later [isolated runtime verification](audit/runtime-verification-2026-09-30.md) passed the complete 62-test Maven reactor, UI/API lint and build, npm audits, Compose configuration, Ansible syntax/lint, API lifecycle with persistence and cleanup, and a limited dashboard browser smoke. It also found stale gateway routing after backend-only restarts and missing downstream request-ID logs; those remain open.
 
 ## Remaining before the exercise audit
 

@@ -6,9 +6,12 @@ import java.util.*;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 public class UserController {
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
     private final UserStore store;
     private final UserDeletionService deletion;
     private final UserDeletionClients cleanup;
@@ -34,7 +37,7 @@ public class UserController {
     @ExceptionHandler(UserStore.NotFound.class) ResponseEntity<Error> notFound(){return ResponseEntity.status(404).body(new Error("NOT_FOUND","Resource not found"));}
     @ExceptionHandler(UserStore.Conflict.class) ResponseEntity<Error> conflict(UserStore.Conflict e){return ResponseEntity.status(409).body(new Error(e.code,"Request conflicts with current state"));}
     @ExceptionHandler(UserDeletionClients.Unavailable.class) ResponseEntity<Error> cleanupUnavailable(UserDeletionClients.Unavailable e){return ResponseEntity.status(503).body(new Error(e.code,"Cleanup dependency unavailable"));}
-    @ExceptionHandler(org.springframework.dao.DataAccessException.class) ResponseEntity<Error> storeUnavailable(){return ResponseEntity.status(503).body(new Error("USER_STORE_UNAVAILABLE","User storage unavailable"));}
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class) ResponseEntity<Error> storeUnavailable(org.springframework.dao.DataAccessException error){log.error("User storage operation failed", error);return ResponseEntity.status(503).body(new Error("USER_STORE_UNAVAILABLE","User storage unavailable"));}
     @ExceptionHandler(MethodArgumentNotValidException.class) ResponseEntity<Error> invalid(){return ResponseEntity.badRequest().body(new Error("INVALID_REQUEST","Request validation failed"));}
     private static <T> Page<T> page(List<T> all,int page,int size){if(page<0||size<1||size>100)throw new IllegalArgumentException();int from=Math.min(page*size,all.size());return new Page<>(all.subList(from,Math.min(from+size,all.size())),page,size,all.size());}
     public record Page<T>(List<T> items,int page,int size,long total) {}

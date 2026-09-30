@@ -45,7 +45,11 @@
       ansible.builtin.assert:
         that:
           - item.value | length > 0
-          - item.value not in ['change-me-local-only', 'change-me-auth', 'change-me-users', 'change-me-payments', 'change-me-neo4j', 'change-me-admin', 'change-me-internal', 'replace-with-at-least-32-random-characters']
+          - >-
+            item.value not in ['change-me-local-only', 'change-me-auth',
+            'change-me-users', 'change-me-payments', 'change-me-neo4j',
+            'change-me-admin', 'change-me-internal',
+            'replace-with-at-least-32-random-characters']
           - item.value is not search('[\x0a\x0d]')
         fail_msg: "A required release secret is absent or a placeholder: {{ item.key }}"
       loop: "{{ release_secrets | dict2items }}"

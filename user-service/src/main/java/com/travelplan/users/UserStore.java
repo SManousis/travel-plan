@@ -1,6 +1,7 @@
 package com.travelplan.users;
 
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
@@ -40,7 +41,7 @@ public class UserStore {
         if (users.values().stream().anyMatch(u -> u.email().equalsIgnoreCase(email))) throw new Conflict("EMAIL_EXISTS");
         UserDomain.User user = new UserDomain.User(UUID.randomUUID(), email.toLowerCase(Locale.ROOT), first, last, role, UserDomain.Status.ACTIVE, Instant.now());
         try { provisioning.provision(user.id(), user.email(), UUID.randomUUID().toString()+"-Initial9!", user.role().name()); } catch (RuntimeException ex) { throw new Conflict("AUTH_PROVISIONING_FAILED"); }
-        users.put(user.id(), user); if (jdbc != null) jdbc.update("insert into users(id,email,first_name,last_name,role,status,created_at) values (?,?,?,?,?,?,?)",user.id(),user.email(),user.firstName(),user.lastName(),user.role().name(),user.status().name(),user.createdAt()); return user;
+        users.put(user.id(), user); if (jdbc != null) jdbc.update("insert into users(id,email,first_name,last_name,role,status,created_at) values (?,?,?,?,?,?,?)",user.id(),user.email(),user.firstName(),user.lastName(),user.role().name(),user.status().name(),Timestamp.from(user.createdAt())); return user;
     }
     public List<UserDomain.User> list() {
         if (jdbc != null) return jdbc.query("select id,email,first_name,last_name,role,status,created_at "
@@ -171,7 +172,7 @@ public class UserStore {
     }
     public synchronized UserDomain.Traveler createTraveler(UUID userId, String passport, String nationality) { if (!activeForPayment(userId)) throw new Conflict("USER_NOT_ACTIVE"); UserDomain.Traveler t = new UserDomain.Traveler(UUID.randomUUID(), userId, passport, nationality, Instant.now()); if (jdbc != null && jdbc.update("insert into travelers(id,user_id,passport_number,nationality,created_at) "
             + "select ?,id,?,?,? from users where id=? and status='ACTIVE' and deletion_stage is null for update",
-            t.id(), t.passportNumber(), t.nationality(), t.createdAt(), userId) == 0)
+            t.id(), t.passportNumber(), t.nationality(), Timestamp.from(t.createdAt()), userId) == 0)
             throw new Conflict("USER_NOT_ACTIVE"); travelers.put(t.id(), t); return t; }
     public List<UserDomain.Traveler> travelers(UUID userId) {
         if (jdbc != null) {

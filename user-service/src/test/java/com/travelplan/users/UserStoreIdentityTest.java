@@ -1,14 +1,31 @@
 package com.travelplan.users;
 
+import java.sql.Timestamp;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class UserStoreIdentityTest {
+    @Test void persistentUserCreateBindsTimestamp() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        @SuppressWarnings("unchecked") ObjectProvider<JdbcTemplate> provider = mock(ObjectProvider.class);
+        @SuppressWarnings("unchecked") ObjectProvider<PlatformTransactionManager> managers = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(jdbc);
+        when(managers.getIfAvailable()).thenReturn(mock(PlatformTransactionManager.class));
+        UserStore store = new UserStore(mock(RevocationClient.class), mock(AuthProvisionClient.class), provider, managers);
+
+        var user = store.create("person@example.com", "First", "Last", UserDomain.Role.OPERATOR);
+
+        verify(jdbc).update(startsWith("insert into users"), eq(user.id()), eq(user.email()),
+                eq("First"), eq("Last"), eq("OPERATOR"), eq("ACTIVE"),
+                eq(Timestamp.from(user.createdAt())));
+    }
+
     @Test void userChangesSynchronizeIdentityBeforeChangingProfile() {
         RevocationClient revocations = mock(RevocationClient.class);
         AuthProvisionClient provisioning = mock(AuthProvisionClient.class);
