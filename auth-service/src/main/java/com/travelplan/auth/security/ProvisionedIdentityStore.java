@@ -23,11 +23,33 @@ public class ProvisionedIdentityStore {
     }
 
     public Identity findByUsername(String username) {
+        return findByUsername(username, false);
+    }
+
+    public Identity findByUsernameForUpdate(String username) {
+        return findByUsername(username, true);
+    }
+
+    private Identity findByUsername(String username, boolean lock) {
         if (jdbc == null) return memory.get(username);
-        return jdbc.query("SELECT subject, username, password_hash, role, enabled FROM auth_identities WHERE username=?",
+        return jdbc.query("SELECT subject, username, password_hash, role, enabled FROM auth_identities WHERE username=?"
+                        + (lock ? " FOR UPDATE" : ""),
                 (rs, row) -> new Identity(rs.getObject("subject", UUID.class), rs.getString("username"),
                         rs.getString("password_hash"), rs.getString("role"), rs.getBoolean("enabled")),
                 username).stream().findFirst().orElse(null);
+    }
+
+    public boolean matchesCurrentRole(String subject, String role) {
+        UUID id;
+        try { id = UUID.fromString(subject); }
+        catch (IllegalArgumentException ex) { return true; } // Bootstrap admin has a username subject.
+        if (jdbc != null) {
+            Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM auth_identities WHERE subject=? AND role=? AND enabled=TRUE",
+                    Integer.class, id, role);
+            return count != null && count == 1;
+        }
+        return memory.values().stream().anyMatch(identity -> identity.subject().equals(id)
+                && identity.enabled() && identity.role().equals(role));
     }
 
     public void provision(UUID subject, String username, String passwordHash, String role) {

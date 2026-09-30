@@ -2,6 +2,7 @@ package com.travelplan.auth;
 
 import com.travelplan.auth.security.TokenService;
 import com.travelplan.auth.security.ProvisionedIdentityStore;
+import com.travelplan.auth.security.IdentitySessionCoordinator;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,18 +24,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AuthController {
     private final TokenService tokens;
     private final ProvisionedIdentityStore identities;
+    private final IdentitySessionCoordinator coordinator;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final String username;
     private final String passwordHash;
     private final String serviceToken;
     private final Map<String, Instant> failedLogins = new ConcurrentHashMap<>();
 
-    public AuthController(TokenService tokens, ProvisionedIdentityStore identities,
+    public AuthController(TokenService tokens, ProvisionedIdentityStore identities, IdentitySessionCoordinator coordinator,
                           @Value("${security.admin-username:admin}") String username,
                           @Value("${security.admin-password:change-me-admin}") String password,
                           @Value("${security.internal-service-token:change-me-internal}") String serviceToken) {
         this.tokens = tokens;
         this.identities = identities;
+        this.coordinator = coordinator;
         this.username = username;
         this.passwordHash = passwordEncoder.encode(password);
         this.serviceToken = serviceToken;
@@ -42,10 +45,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        return coordinator.execute(() -> loginLocked(request));
+    }
+
+    private ResponseEntity<?> loginLocked(LoginRequest request) {
         Instant blockedUntil = failedLogins.get(request.username());
         if (blockedUntil != null && blockedUntil.isAfter(Instant.now())) return ResponseEntity.status(429).body(new ErrorResponse("RATE_LIMITED", "Try again later"));
         boolean bootstrap = username.equals(request.username());
-        ProvisionedIdentityStore.Identity identity = bootstrap ? null : identities.findByUsername(request.username());
+        ProvisionedIdentityStore.Identity identity = bootstrap ? null : identities.findByUsernameForUpdate(request.username());
         String hash = bootstrap ? passwordHash : identity == null || !identity.enabled() ? null : identity.passwordHash();
         if (hash == null || !passwordEncoder.matches(request.password(), hash)) {
             failedLogins.put(request.username(), Instant.now().plusSeconds(10));
@@ -61,9 +68,11 @@ public class AuthController {
         if (!serviceToken.equals(presented)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         if (username.equals(request.username()) || !("ADMIN".equals(request.role()) || "OPERATOR".equals(request.role())))
             return ResponseEntity.badRequest().build();
-        if (identities.findByUsername(request.username()) != null) return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        identities.provision(request.userId(), request.username(), passwordEncoder.encode(request.password()), request.role());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return coordinator.execute(() -> {
+            if (identities.findByUsername(request.username()) != null) return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            identities.provision(request.userId(), request.username(), passwordEncoder.encode(request.password()), request.role());
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        });
     }
 
     @PostMapping("/internal/identities/{subject}")
@@ -72,10 +81,12 @@ public class AuthController {
         if (!serviceToken.equals(presented)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         if (username.equals(request.username()) || !("ADMIN".equals(request.role()) || "OPERATOR".equals(request.role())))
             return ResponseEntity.badRequest().build();
-        if (!identities.updateSubject(subject, request.username(), request.role(), request.enabled()))
-            return ResponseEntity.notFound().build();
-        tokens.revokeSubject(subject.toString());
-        return ResponseEntity.noContent().build();
+        return coordinator.execute(() -> {
+            if (!identities.updateSubject(subject, request.username(), request.role(), request.enabled()))
+                return ResponseEntity.notFound().build();
+            tokens.revokeSubject(subject.toString());
+            return ResponseEntity.noContent().build();
+        });
     }
 
     @PostMapping("/refresh")
@@ -98,9 +109,11 @@ public class AuthController {
     @PostMapping("/internal/revoke/{subject}")
     public ResponseEntity<Void> revokeSubject(@PathVariable String subject, @RequestHeader(value = "X-Internal-Service-Token", required = false) String presented) {
         if (!serviceToken.equals(presented)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        identities.disableSubject(subject);
-        tokens.revokeSubject(subject);
-        return ResponseEntity.noContent().build();
+        return coordinator.execute(() -> {
+            identities.disableSubject(subject);
+            tokens.revokeSubject(subject);
+            return ResponseEntity.noContent().build();
+        });
     }
 
     private TokenService.Claims bearer(String value) { return value != null && value.startsWith("Bearer ") ? tokens.verify(value.substring(7)) : null; }

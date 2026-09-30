@@ -17,23 +17,29 @@ public class TokenService {
     private final byte[] secret;
     private final long ttlSeconds;
     private final TokenSessionStore sessions;
+    private final ProvisionedIdentityStore identities;
     private final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
     private final Base64.Decoder decoder = Base64.getUrlDecoder();
 
     @Autowired
     public TokenService(@Value("${security.token-secret:replace-with-at-least-32-random-characters}") String secret,
                         @Value("${security.access-token-ttl-seconds:900}") long ttlSeconds,
-                        TokenSessionStore sessions) {
+                        TokenSessionStore sessions, ProvisionedIdentityStore identities) {
         if (secret.length() < 32) {
             throw new IllegalArgumentException("security.token-secret must contain at least 32 characters");
         }
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.ttlSeconds = ttlSeconds;
         this.sessions = sessions;
+        this.identities = identities;
     }
 
     public TokenService(String secret, long ttlSeconds) {
-        this(secret, ttlSeconds, new TokenSessionStore((org.springframework.jdbc.core.JdbcTemplate) null));
+        this(secret, ttlSeconds, new TokenSessionStore((org.springframework.jdbc.core.JdbcTemplate) null), null);
+    }
+
+    public TokenService(String secret, long ttlSeconds, TokenSessionStore sessions) {
+        this(secret, ttlSeconds, sessions, null);
     }
 
     public IssuedToken issue(String subject, String role) {
@@ -47,7 +53,8 @@ public class TokenService {
 
     public Claims verify(String token) {
         Claims claims = verifyIgnoringRevocation(token);
-        return claims != null && sessions.isActive(UUID.fromString(claims.jti()), Instant.now()) ? claims : null;
+        return claims != null && sessions.isActive(UUID.fromString(claims.jti()), Instant.now())
+                && (identities == null || identities.matchesCurrentRole(claims.subject(), claims.role())) ? claims : null;
     }
 
     public void revoke(String token) {

@@ -67,6 +67,19 @@ class TokenServiceTest {
         assertThrows(IllegalStateException.class, () -> service.verify(token));
     }
 
+    @Test void changedIdentityInvalidatesEvenANewlyIssuedOldRoleToken() {
+        var identities = new ProvisionedIdentityStore((JdbcTemplate) null);
+        UUID subject = UUID.randomUUID();
+        identities.provision(subject, "person@example.com", "hash", "ADMIN");
+        TokenService service = new TokenService(SECRET, 60,
+                new TokenSessionStore((JdbcTemplate) null), identities);
+        String oldRoleToken = service.issue(subject.toString(), "ADMIN").value();
+
+        identities.updateSubject(subject, "person@example.com", "OPERATOR", true);
+        assertNull(service.verify(oldRoleToken));
+        assertNull(service.verify(service.issue(subject.toString(), "ADMIN").value()));
+    }
+
     private JdbcTemplate sessionDatabase() {
         var datasource = new DriverManagerDataSource("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", "");
         JdbcTemplate jdbc = new JdbcTemplate(datasource);

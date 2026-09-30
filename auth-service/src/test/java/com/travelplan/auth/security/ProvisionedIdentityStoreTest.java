@@ -20,7 +20,13 @@ class ProvisionedIdentityStoreTest {
 
         var second = new ProvisionedIdentityStore(jdbc);
         assertThat(second.findByUsername("person@example.com").subject()).isEqualTo(id);
+        var firstTokens = new TokenService("01234567890123456789012345678901", 60,
+                new TokenSessionStore(jdbc), new ProvisionedIdentityStore(jdbc));
+        String token = firstTokens.issue(id.toString(), "OPERATOR").value();
+        assertThat(new TokenService("01234567890123456789012345678901", 60,
+                new TokenSessionStore(jdbc), second).verify(token)).isNotNull();
         second.disableSubject(id.toString());
         assertThat(new ProvisionedIdentityStore(jdbc).findByUsername("person@example.com").enabled()).isFalse();
+        assertThat(firstTokens.verify(token)).isNull();
     }
 }
