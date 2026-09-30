@@ -20,4 +20,16 @@ Auth migration V3 creates `auth_identities`. Older provisioned passwords existed
 
 This is a required one-time reset for upgrades from the memory-only auth implementation. There is currently no end-user password-change flow; subsequent password replacement remains an operator procedure until that feature is built.
 
+## Upgrading legacy travel graph records
+
+The earlier travel-service kept stops, activities, accommodation, transport, and participants only in process memory. Its Neo4j writes contained destination and top-level travel nodes. A restart lost the itinerary fields, so the new graph repository cannot infer them from the database.
+
+1. Put travel writes in maintenance mode and back up Neo4j before deploying the new service. Record travel IDs and external references that may need reconciliation.
+2. Inspect incomplete roots with `MATCH (t:Travel) WHERE NOT EXISTS { MATCH (t)-[:HAS_STOP]->(:DestinationStop) } RETURN t.id, t.name, t.startDate, t.endDate`. Restore each itinerary from an external source of record. If none exists, mark that travel for operator review; the API returns `409 INCOMPLETE_LEGACY_TRAVEL` for it.
+3. Before the new service initializes its normalized destination constraint, inspect duplicates with `MATCH (d:Destination) WITH toLower(trim(d.name)) AS name, toLower(trim(d.country)) AS country, collect(d.id) AS ids WHERE size(ids) > 1 RETURN name, country, ids`. Reconcile duplicate IDs and any external references before removing redundant nodes. Startup intentionally fails while duplicates violate the constraint.
+4. For an incomplete root that can be replaced, record its old UUID, remove that specific root after backup with `MATCH (t:Travel {id: $id}) WHERE NOT EXISTS { MATCH (t)-[:HAS_STOP]->(:DestinationStop) } DETACH DELETE t`, then create the complete travel through the admin API. Record the old-to-new UUID mapping and reconcile any consumers of the old ID.
+5. Verify complete aggregates with `MATCH (t:Travel)-[:HAS_STOP]->(s:DestinationStop)-[:AT]->(d:Destination) RETURN t.id, count(s) AS stops, collect(d.id) AS destinations ORDER BY t.id`. Check a representative itinerary from a second travel-service instance before reopening writes.
+
+Do not treat a top-level-only node as a completed itinerary. The original in-memory component data cannot be recovered from Neo4j alone.
+
 Run `scripts/load/replica-smoke.sh` with `compose.scale.yml` to record status/error counts during a 40-request authenticated read sample. Stop one replica and repeat; Docker DNS routes new connections to survivors. Stop all instances of one service to verify a controlled dependency failure, then restore it with Compose. Application services use bounded HTTP client timeouts and idempotency keys for retried writes; this local demonstration does not claim multi-host or database high availability.
