@@ -39,4 +39,4 @@
 ### 4. Verification and handoff
 
 - [x] Run available static/configuration checks and inspect the staged diff.
-- [ ] Commit and push on `build-security-data-fixes`; leave it unmerged.
+- [x] Commit and push on `build-security-data-fixes`; leave it unmerged.
