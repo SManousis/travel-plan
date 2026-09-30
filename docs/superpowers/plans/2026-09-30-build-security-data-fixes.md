@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-30-build-security-data-fixes-design.md`
 
-**Execution note (2026-09-30):** The steps below are complete on `build-security-data-fixes`. The servlet validation clients use JDK `HttpClient` with explicit timeouts rather than the planned `RestClient`. Identity UUID/role persistence and lifecycle synchronization were added after tests exposed a deletion-revocation gap. Auth session persistence and the internal validation endpoint were committed together. Verification evidence is in `docs/audit/project-audit-2026-09-29.md`.
+**Execution note (2026-09-30):** The steps below are complete on `build-security-data-fixes`. The servlet validation clients use JDK `HttpClient` with explicit timeouts rather than the planned `RestClient`. Identity UUID/role persistence and lifecycle synchronization were added after tests exposed a deletion-revocation gap. Review then added transactional login/identity changes, current-role validation, and an upgrade reset procedure for existing users. Auth session persistence and the internal validation endpoint were committed together. Verification evidence is in `docs/audit/project-audit-2026-09-29.md`.
 
 ## Global Constraints
 
