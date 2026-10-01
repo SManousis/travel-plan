@@ -39,7 +39,6 @@ pipeline {
       }
     }
     stage('SonarQube analysis') {
-      when { expression { env.BRANCH_NAME == 'main' || (!env.BRANCH_NAME?.trim() && env.GIT_BRANCH in ['main', 'origin/main']) } }
       steps {
         withSonarQubeEnv('travel-plan-sonarqube') {
           sh 'sonar-scanner'
@@ -47,7 +46,6 @@ pipeline {
       }
     }
     stage('Quality gate') {
-      when { expression { env.BRANCH_NAME == 'main' || (!env.BRANCH_NAME?.trim() && env.GIT_BRANCH in ['main', 'origin/main']) } }
       steps {
         timeout(time: 10, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
