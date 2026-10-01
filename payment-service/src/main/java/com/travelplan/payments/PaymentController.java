@@ -2,6 +2,7 @@ package com.travelplan.payments;
 
 import com.travelplan.payments.PaymentDomain.Conflict;
 import com.travelplan.payments.PaymentDomain.Gateway;
+import com.travelplan.payments.PaymentDomain.InvalidRequest;
 import com.travelplan.payments.PaymentDomain.Method;
 import com.travelplan.payments.PaymentDomain.NotFound;
 import jakarta.validation.Valid;
@@ -89,7 +90,7 @@ public final class PaymentController {
                     .body(view(previous));
         }
         var attempt = store.beginConnect(body.userId(), body.gatewayId(), body.providerReference(),
-                body.displayLabel(), idempotencyKey, hash);
+                body.displayLabel(), idempotencyKey, hash, Boolean.TRUE.equals(body.isDefault()));
         if (!attempt.shouldInspect()) return ResponseEntity.status("PENDING".equals(attempt.method().status())
                 ? HttpStatus.ACCEPTED : HttpStatus.OK).body(view(attempt.method()));
         ProviderAdapter adapter = adapter(attempt.method().provider());
@@ -110,8 +111,23 @@ public final class PaymentController {
     MethodView method(@PathVariable UUID id) { return view(store.method(id)); }
 
     @PatchMapping("/api/payment-methods/{id}")
-    MethodView updateMethod(@PathVariable UUID id, @Valid @RequestBody LabelWrite body) {
-        return view(store.updateLabel(id, body.displayLabel()));
+    MethodView updateMethod(@PathVariable UUID id, @RequestBody Map<String, Object> body) {
+        if (body.isEmpty() || body.keySet().stream()
+                .anyMatch(field -> !"displayLabel".equals(field) && !"isDefault".equals(field)))
+            throw new InvalidRequest();
+        String label = null;
+        Boolean isDefault = null;
+        if (body.containsKey("displayLabel")) {
+            Object value = body.get("displayLabel");
+            if (!(value instanceof String text) || text.isBlank() || text.length() > 120)
+                throw new InvalidRequest();
+            label = text;
+        }
+        if (body.containsKey("isDefault")) {
+            if (!(body.get("isDefault") instanceof Boolean value)) throw new InvalidRequest();
+            isDefault = value;
+        }
+        return view(store.updatePreferences(id, label, isDefault));
     }
 
     @DeleteMapping("/api/payment-methods/{id}")
@@ -133,13 +149,14 @@ public final class PaymentController {
 
     private static MethodView view(Method method) {
         return new MethodView(method.id(), method.userId(), method.gatewayId(), method.provider(),
-                method.displayLabel(), method.status(), method.displayMetadata(), method.failureCode(),
-                method.createdAt());
+                method.displayLabel(), method.isDefault(), method.status(), method.displayMetadata(),
+                method.failureCode(), method.createdAt());
     }
 
     private static String requestHash(MethodWrite body) {
         String canonical = canonicalField(body.userId().toString()) + canonicalField(body.gatewayId().toString())
-                + canonicalField(body.providerReference()) + canonicalField(body.displayLabel());
+                + canonicalField(body.providerReference()) + canonicalField(body.displayLabel())
+                + (Boolean.TRUE.equals(body.isDefault()) ? canonicalField("true") : "");
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(canonical.getBytes(StandardCharsets.UTF_8)));
@@ -153,6 +170,11 @@ public final class PaymentController {
     @ExceptionHandler(NotFound.class)
     ResponseEntity<Error> missing() {
         return ResponseEntity.status(404).body(new Error("NOT_FOUND", "Resource not found"));
+    }
+
+    @ExceptionHandler(InvalidRequest.class)
+    ResponseEntity<Error> invalidRequest() {
+        return ResponseEntity.badRequest().body(new Error("VALIDATION_ERROR", "Invalid payment method patch"));
     }
 
     @ExceptionHandler(Conflict.class)
@@ -174,9 +196,9 @@ public final class PaymentController {
     record GatewayWrite(@NotBlank String provider, @NotBlank @Size(max = 200) String displayName) {}
     record MethodWrite(@NotNull UUID userId, @NotNull UUID gatewayId,
                        @NotBlank @Size(max = 255) String providerReference,
-                       @NotBlank @Size(max = 120) String displayLabel) {}
-    record LabelWrite(@NotBlank @Size(max = 120) String displayLabel) {}
+                       @NotBlank @Size(max = 120) String displayLabel, Boolean isDefault) {}
     record MethodView(UUID id, UUID userId, UUID gatewayId, String provider, String displayLabel,
-                      String status, String displayMetadata, String failureCode, Instant createdAt) {}
+                      boolean isDefault, String status, String displayMetadata, String failureCode,
+                      Instant createdAt) {}
     record Error(String code, String message) {}
 }

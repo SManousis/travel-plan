@@ -4,7 +4,7 @@ import type { Gateway, PaymentMethod, User } from "../../lib/types";
 import { Empty, Message } from "../../components/Shared";
 
 const emptyGateway = { provider: "STRIPE" as Gateway["provider"], displayName: "" };
-const emptyMethod = { userId: "", gatewayId: "", providerReference: "", displayLabel: "" };
+const emptyMethod = { userId: "", gatewayId: "", providerReference: "", displayLabel: "", isDefault: false };
 
 export function PaymentsPanel({ context, active }: { context: ApiContext; active: boolean }) {
   const [gateways, setGateways] = React.useState<Gateway[]>([]);
@@ -17,6 +17,7 @@ export function PaymentsPanel({ context, active }: { context: ApiContext; active
   const [gatewayError, setGatewayError] = React.useState("");
   const [gatewayNotice, setGatewayNotice] = React.useState("");
   const [methodDraft, setMethodDraft] = React.useState(emptyMethod);
+  const [methodPending, setMethodPending] = React.useState(false);
   const methodAttempt = React.useRef<{ body: string; key: string } | null>(null);
   const deleteKeys = React.useRef<Record<string, string>>({});
   const [editingMethod, setEditingMethod] = React.useState<PaymentMethod | null>(null);
@@ -75,8 +76,10 @@ export function PaymentsPanel({ context, active }: { context: ApiContext; active
       });
       await loadMethods();
       if (result.status === 202) {
-        setMethodNotice("Provider inspection is pending. Keep this form and retry with the same key after the claim window.");
+        setMethodPending(true);
+        setMethodNotice("Provider inspection is pending. The inputs are locked so retry uses the same key and reference after the claim window.");
       } else {
+        setMethodPending(false);
         setMethodDraft(emptyMethod); methodAttempt.current = null;
         setMethodNotice("Payment method connected. Only safe display details are shown below.");
       }
@@ -94,6 +97,18 @@ export function PaymentsPanel({ context, active }: { context: ApiContext; active
         method: "PATCH", body: { displayLabel: editingMethod.displayLabel },
       });
       setEditingMethod(null); setMethodNotice("Display label updated."); await loadMethods();
+    } catch (error) { setMethodError(errorMessage(error)); }
+    finally { setMethodBusy(false); }
+  }
+
+  async function selectDefault(method: PaymentMethod) {
+    setMethodBusy(true); setMethodError(""); setMethodNotice("");
+    try {
+      await api<PaymentMethod>(context, `/api/payment-methods/${method.id}`, {
+        method: "PATCH", body: { isDefault: true },
+      });
+      setMethodNotice(`${method.displayLabel} is now the default payment method.`);
+      await loadMethods();
     } catch (error) { setMethodError(errorMessage(error)); }
     finally { setMethodBusy(false); }
   }
@@ -162,8 +177,11 @@ export function PaymentsPanel({ context, active }: { context: ApiContext; active
           <li className="record-row" key={method.id}><div><strong>{method.displayLabel}</strong>
             <span>{method.displayMetadata || method.provider} · {userName(method.userId)}</span>
             <small>{gatewayName(method.gatewayId)} · <span className={`status ${method.status.toLowerCase()}`}>{method.status}</span>
+              {method.isDefault && <> · <span>Default</span></>}
               {method.failureCode && <> · {method.failureCode}</>}</small></div>
             <div className="actions"><button type="button" onClick={() => setEditingMethod({ ...method })}>Label</button>
+              {method.status === "ACTIVE" && !method.isDefault && <button type="button" disabled={methodBusy}
+                onClick={() => void selectDefault(method)}>Make default</button>}
               <button type="button" className="danger" disabled={methodBusy} onClick={() => void deleteMethod(method)}>Remove</button></div>
           </li>)}</ul>}
       </section>
@@ -171,15 +189,17 @@ export function PaymentsPanel({ context, active }: { context: ApiContext; active
         <h3 id="method-form-title">Connect sandbox method</h3>
         <p className="field-hint">Finish tokenization and approval with the provider first, then enter its reusable reference here. Never enter a card number or security code.</p>
         <form className="field-grid" onSubmit={createMethod}>
-          <label>User<select required value={methodDraft.userId} onChange={event => setMethodDraft({ ...methodDraft, userId: event.target.value })}>
+          <label>User<select required disabled={methodPending} value={methodDraft.userId} onChange={event => setMethodDraft({ ...methodDraft, userId: event.target.value })}>
             <option value="">Choose active user</option>{users.filter(user => user.status === "ACTIVE").map(user =>
               <option key={user.id} value={user.id}>{user.email}</option>)}</select></label>
-          <label>Gateway<select required value={methodDraft.gatewayId} onChange={event => setMethodDraft({ ...methodDraft, gatewayId: event.target.value })}>
+          <label>Gateway<select required disabled={methodPending} value={methodDraft.gatewayId} onChange={event => setMethodDraft({ ...methodDraft, gatewayId: event.target.value })}>
             <option value="">Choose gateway</option>{gateways.filter(gateway => gateway.enabled).map(gateway =>
               <option key={gateway.id} value={gateway.id}>{gateway.displayName} · {gateway.provider}</option>)}</select></label>
-          <label>Provider reference<input required autoComplete="off" value={methodDraft.providerReference}
+          <label>Provider reference<input required disabled={methodPending} autoComplete="off" value={methodDraft.providerReference}
             onChange={event => setMethodDraft({ ...methodDraft, providerReference: event.target.value })} /></label>
-          <label>Display label<input required value={methodDraft.displayLabel} onChange={event => setMethodDraft({ ...methodDraft, displayLabel: event.target.value })} /></label>
+          <label>Display label<input required disabled={methodPending} value={methodDraft.displayLabel} onChange={event => setMethodDraft({ ...methodDraft, displayLabel: event.target.value })} /></label>
+          <label>Set as default after connection<input type="checkbox" disabled={methodPending} checked={methodDraft.isDefault}
+            onChange={event => setMethodDraft({ ...methodDraft, isDefault: event.target.checked })} /></label>
           <button className="primary" disabled={methodBusy || users.every(user => user.status !== "ACTIVE") || gateways.length === 0}>
             {methodBusy ? "Checking provider…" : "Connect method"}</button>
         </form>

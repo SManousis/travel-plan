@@ -38,7 +38,22 @@ public class UserStore {
         this.transactions = manager == null ? null : new TransactionTemplate(manager);
         if (jdbc != null && transactions == null) throw new IllegalStateException("User transactions unavailable");
     }
-    @PostConstruct void loadPersisted() { if (jdbc == null) return; try { jdbc.query("select id,email,first_name,last_name,role,status,created_at from users", r -> { var u=new UserDomain.User((UUID)r.getObject("id"),r.getString("email"),r.getString("first_name"),r.getString("last_name"),UserDomain.Role.valueOf(r.getString("role")),UserDomain.Status.valueOf(r.getString("status")),r.getTimestamp("created_at").toInstant()); users.put(u.id(),u); }); jdbc.query("select id,user_id,passport_number,nationality,created_at from travelers",r->{var t=new UserDomain.Traveler((UUID)r.getObject("id"),(UUID)r.getObject("user_id"),r.getString("passport_number"),r.getString("nationality"),r.getTimestamp("created_at").toInstant());travelers.put(t.id(),t);}); } catch (RuntimeException ignored) {} }
+    @PostConstruct void loadPersisted() {
+        if (jdbc == null) return;
+        jdbc.query("select id,email,first_name,last_name,role,status,created_at from users", r -> {
+            var user = new UserDomain.User((UUID) r.getObject("id"), r.getString("email"),
+                    r.getString("first_name"), r.getString("last_name"),
+                    UserDomain.Role.valueOf(r.getString("role")), UserDomain.Status.valueOf(r.getString("status")),
+                    r.getTimestamp("created_at").toInstant());
+            users.put(user.id(), user);
+        });
+        jdbc.query("select id,user_id,passport_number,nationality,created_at from travelers", r -> {
+            var traveler = new UserDomain.Traveler((UUID) r.getObject("id"), (UUID) r.getObject("user_id"),
+                    r.getString("passport_number"), r.getString("nationality"),
+                    r.getTimestamp("created_at").toInstant());
+            travelers.put(traveler.id(), traveler);
+        });
+    }
 
     public UserDomain.User create(String email, String first, String last, UserDomain.Role role) {
         if (users.values().stream().anyMatch(u -> u.email().equalsIgnoreCase(email))) throw new Conflict("EMAIL_EXISTS");

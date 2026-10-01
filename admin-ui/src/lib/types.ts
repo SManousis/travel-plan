@@ -22,6 +22,6 @@ export type Travel = {
 export type Gateway = { id: string; provider: "STRIPE" | "PAYPAL"; displayName: string; enabled: boolean; createdAt: string };
 export type PaymentMethod = {
   id: string; userId: string; gatewayId: string; provider: "STRIPE" | "PAYPAL";
-  displayLabel: string; status: "PENDING" | "ACTIVE" | "FAILED" | "DELETION_PENDING";
+  displayLabel: string; isDefault: boolean; status: "PENDING" | "ACTIVE" | "FAILED" | "DELETION_PENDING";
   displayMetadata: string | null; failureCode: string | null; createdAt: string;
 };

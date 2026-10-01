@@ -1,5 +1,5 @@
 import * as React from "react";
-import { api, apiResult, errorMessage, type ApiContext, type Page } from "../../lib/api";
+import { api, apiResult, errorMessage, newKey, type ApiContext, type Page } from "../../lib/api";
 import type { Traveler, User } from "../../lib/types";
 import { Empty, Message, PageControls } from "../../components/Shared";
 
@@ -11,6 +11,7 @@ export function UsersPanel({ context, active }: { context: ApiContext; active: b
   const [userList, setUserList] = React.useState<Page<User> | null>(null);
   const [selected, setSelected] = React.useState<User | null>(null);
   const [newUser, setNewUser] = React.useState(emptyUser);
+  const createAttempt = React.useRef<{ body: string; key: string } | null>(null);
   const [editUser, setEditUser] = React.useState({ ...emptyUser, status: "ACTIVE" as User["status"] });
   const [userBusy, setUserBusy] = React.useState(false);
   const [userError, setUserError] = React.useState("");
@@ -64,7 +65,12 @@ export function UsersPanel({ context, active }: { context: ApiContext; active: b
   async function createUser(event: React.FormEvent) {
     event.preventDefault(); setUserBusy(true); setUserError(""); setUserNotice("");
     try {
-      const user = await api<User>(context, "/api/users", { method: "POST", body: newUser });
+      const body = JSON.stringify(newUser);
+      if (createAttempt.current?.body !== body) createAttempt.current = { body, key: newKey() };
+      const user = await api<User>(context, "/api/users", {
+        method: "POST", headers: { "Idempotency-Key": createAttempt.current.key }, body: newUser,
+      });
+      createAttempt.current = null;
       setNewUser(emptyUser); setUserNotice("User created. Arrange their initial credentials through the operator process.");
       chooseUser(user); await loadUsers();
     } catch (error) { setUserError(errorMessage(error)); }
@@ -145,10 +151,10 @@ export function UsersPanel({ context, active }: { context: ApiContext; active: b
       <section className="workspace-card" aria-labelledby="new-user-title">
         <h3 id="new-user-title">Create user</h3>
         <form className="field-grid" onSubmit={createUser}>
-          <label>Email<input required type="email" value={newUser.email} onChange={event => setNewUser({ ...newUser, email: event.target.value })} /></label>
-          <label>First name<input required value={newUser.firstName} onChange={event => setNewUser({ ...newUser, firstName: event.target.value })} /></label>
-          <label>Last name<input required value={newUser.lastName} onChange={event => setNewUser({ ...newUser, lastName: event.target.value })} /></label>
-          <label>Role<select value={newUser.role} onChange={event => setNewUser({ ...newUser, role: event.target.value as User["role"] })}>
+          <label>Email<input required type="email" value={newUser.email} onChange={event => { createAttempt.current = null; setNewUser({ ...newUser, email: event.target.value }); }} /></label>
+          <label>First name<input required value={newUser.firstName} onChange={event => { createAttempt.current = null; setNewUser({ ...newUser, firstName: event.target.value }); }} /></label>
+          <label>Last name<input required value={newUser.lastName} onChange={event => { createAttempt.current = null; setNewUser({ ...newUser, lastName: event.target.value }); }} /></label>
+          <label>Role<select value={newUser.role} onChange={event => { createAttempt.current = null; setNewUser({ ...newUser, role: event.target.value as User["role"] }); }}>
             <option value="OPERATOR">Operator</option><option value="ADMIN">Administrator</option></select></label>
           <button className="primary" disabled={userBusy}>{userBusy ? "Saving…" : "Create user"}</button>
         </form>

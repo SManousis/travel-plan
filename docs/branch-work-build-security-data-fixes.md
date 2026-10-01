@@ -38,10 +38,12 @@ The [2026-10-01 runtime follow-up](audit/runtime-verification-2026-10-01.md) fix
 
 An opt-in [local payment simulator](payments.md#local-simulation-without-provider-accounts) now generates ignored synthetic credentials and exposes fake Stripe/PayPal references for API and dashboard rehearsal. The adapter, mock-provider, and gateway-to-payment flows passed local tests; the complete Maven reactor passed 76 tests after this addition. Real provider sandbox calls and customer ownership remain unverified.
 
+The [2026-10-01 essentials check](audit/essentials-2026-10-01.md) records the next branch changes: dashboard unit tests and JUnit publication, npm advisory and Ansible checks in Jenkins, Debian/Ubuntu Docker host preparation, payment-method defaults, per-process log IDs, and fail-fast persisted-user loading. Local backend, dashboard, API, simulator, npm advisory, Ansible, Compose, and PostgreSQL migration checks passed. Live Jenkins and deployment evidence is still open.
+
 ## Remaining before the exercise audit
 
-1. Configure Jenkins, SonarQube, a CI agent, and Gitea branch protection; demonstrate that failed PR checks block merging. UI lint and source pipeline wiring exist, while dependency review and native PR Sonar analysis remain open.
-2. Configure a registry and prepared Linux target; run the SHA-tagged image release and secure Ansible deployment, then record clean, repeat, and rollback results. Vault initialization and app-side secret retrieval remain open.
+1. Configure Jenkins, SonarQube, a CI agent, and Gitea branch protection; demonstrate that failed PR checks block merging. Dashboard tests, npm advisory checks, Ansible checks, and main-only Sonar stages are wired in source, but no live PR gate or quality report has been recorded.
+2. Configure a registry and Linux target; run the SHA-tagged image release and secure Ansible deployment, then record clean, repeat, and rollback results. The Debian/Ubuntu preparation playbook has syntax/lint evidence only. Vault initialization and app-side secret retrieval remain open.
 3. Finish the remaining payment lifecycle/API decisions and verify Stripe and PayPal against sandboxes. Credentials and a trusted provider-customer-to-local-user mapping are not available yet, so provider ownership proof remains deferred.
 4. Run and record deployed user-deletion/retry, authorization/TLS, database persistence, collector tracing, load/failover, and Chrome/Firefox dashboard scenarios. The local gateway-to-service trace and backend replacement probes are recorded, while the [browser checklist](audit/browser-checks.md) remains pending.
 5. Reconcile checked phase claims and older architecture/API documentation with the implementation and dated evidence. Phase 7 payment completion and final audit readiness are not established.

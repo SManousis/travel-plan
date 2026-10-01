@@ -14,13 +14,28 @@ pipeline {
     stage('API contracts') {
       steps { sh 'npm ci && npm run lint:api' }
     }
-    stage('Dashboard lint and build') {
+    stage('Dashboard tests, lint and build') {
       steps {
         dir('admin-ui') {
           sh 'npm ci'
+          sh 'npm run test:ci'
           sh 'npm run lint'
           sh 'npm run build'
         }
+      }
+    }
+    stage('Dependency advisories') {
+      steps {
+        sh 'npm audit --audit-level=high'
+        dir('admin-ui') {
+          sh 'npm audit --audit-level=high'
+        }
+      }
+    }
+    stage('Deployment playbook checks') {
+      steps {
+        sh 'ansible-playbook --syntax-check -i infra/ansible/inventory.ini infra/ansible/site.yml'
+        sh 'ansible-lint infra/ansible/site.yml infra/ansible/prepare.yml infra/ansible/deploy.yml'
       }
     }
     stage('SonarQube analysis') {
@@ -105,7 +120,7 @@ pipeline {
   }
   post {
     always {
-      junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
+      junit testResults: '**/target/surefire-reports/*.xml,admin-ui/reports/vitest-junit.xml', allowEmptyResults: true
       archiveArtifacts artifacts: '**/target/*.jar,admin-ui/dist/**', allowEmptyArchive: true
     }
   }

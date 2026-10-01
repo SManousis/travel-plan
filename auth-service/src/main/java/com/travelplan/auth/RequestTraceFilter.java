@@ -20,6 +20,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RequestTraceFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RequestTraceFilter.class);
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
+    private static final String INSTANCE_ID = instanceId();
+
+    private static String instanceId() {
+        String configured = System.getenv("SERVICE_INSTANCE_ID");
+        if (configured != null && SAFE_ID.matcher(configured).matches()) {
+            return configured;
+        }
+        return UUID.randomUUID().toString();
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -36,8 +45,8 @@ public class RequestTraceFilter extends OncePerRequestFilter {
         try {
             chain.doFilter(request, response);
         } finally {
-            log.info("{\"timestamp\":\"{}\",\"service\":\"auth-service\",\"severity\":\"INFO\",\"traceId\":\"{}\",\"operation\":\"{}\",\"status\":\"{}\"}",
-                    Instant.now(), id, request.getMethod() + " " + request.getRequestURI(), response.getStatus());
+            log.info("{\"timestamp\":\"{}\",\"service\":\"auth-service\",\"instanceId\":\"{}\",\"severity\":\"INFO\",\"traceId\":\"{}\",\"operation\":\"{}\",\"status\":\"{}\"}",
+                    Instant.now(), INSTANCE_ID, id, request.getMethod() + " " + request.getRequestURI(), response.getStatus());
         }
     }
 }

@@ -26,7 +26,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 final class PaymentStore {
     private static final String METHOD_COLUMNS = "id,user_id,gateway_id,provider,provider_reference,display_label,"
-            + "status,display_metadata,failure_code,failure_stage,idempotency_key,request_hash,created_at,updated_at";
+            + "status,display_metadata,failure_code,failure_stage,idempotency_key,request_hash,is_default,"
+            + "select_default_on_connect,created_at,updated_at";
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
     private final Map<UUID, Gateway> localGateways = new ConcurrentHashMap<>();
@@ -96,7 +97,7 @@ final class PaymentStore {
         }
     }
 
-    List<Method> methods(UUID userId) {
+    synchronized List<Method> methods(UUID userId) {
         if (jdbc != null) {
             String sql = "SELECT " + METHOD_COLUMNS + " FROM payment_methods"
                     + (userId == null ? "" : " WHERE user_id=?") + " ORDER BY created_at,id";
@@ -107,7 +108,7 @@ final class PaymentStore {
                 .sorted(Comparator.comparing(Method::createdAt).thenComparing(Method::id)).toList();
     }
 
-    Method method(UUID id) {
+    synchronized Method method(UUID id) {
         if (jdbc != null) {
             List<Method> found = jdbc.query("SELECT " + METHOD_COLUMNS + " FROM payment_methods WHERE id=?",
                     (rs, row) -> method(rs), id);
@@ -121,10 +122,15 @@ final class PaymentStore {
 
     synchronized ConnectAttempt beginConnect(UUID userId, UUID gatewayId, String reference, String label,
                                              String idempotencyKey, String requestHash) {
+        return beginConnect(userId, gatewayId, reference, label, idempotencyKey, requestHash, false);
+    }
+
+    synchronized ConnectAttempt beginConnect(UUID userId, UUID gatewayId, String reference, String label,
+                                             String idempotencyKey, String requestHash, boolean selectDefault) {
         if (jdbc != null) {
             try {
                 return transactions.execute(status -> beginConnectLocked(userId, gatewayId, reference,
-                        label, idempotencyKey, requestHash));
+                        label, idempotencyKey, requestHash, selectDefault));
             } catch (DataIntegrityViolationException ex) {
                 Method concurrent = byIdempotencyKey(idempotencyKey);
                 if (concurrent != null) {
@@ -134,11 +140,11 @@ final class PaymentStore {
                 throw new Conflict("PAYMENT_METHOD_EXISTS");
             }
         }
-        return beginConnectLocked(userId, gatewayId, reference, label, idempotencyKey, requestHash);
+        return beginConnectLocked(userId, gatewayId, reference, label, idempotencyKey, requestHash, selectDefault);
     }
 
     private ConnectAttempt beginConnectLocked(UUID userId, UUID gatewayId, String reference, String label,
-                                              String idempotencyKey, String requestHash) {
+                                              String idempotencyKey, String requestHash, boolean selectDefault) {
         boolean deleting;
         if (jdbc != null) {
             jdbc.update("INSERT INTO payment_user_lifecycle(user_id) VALUES (?) ON CONFLICT DO NOTHING", userId);
@@ -181,13 +187,15 @@ final class PaymentStore {
         if (duplicateReference(gateway.provider(), reference)) throw new Conflict("PAYMENT_METHOD_EXISTS");
         Instant now = Instant.now();
         Method pending = new Method(UUID.randomUUID(), userId, gatewayId, gateway.provider(), reference,
-                label, "PENDING", null, null, null, idempotencyKey, requestHash, now, now);
+                label, "PENDING", null, null, null, idempotencyKey, requestHash, false, selectDefault, now, now);
         if (jdbc != null) jdbc.update("INSERT INTO payment_methods(id,user_id,gateway_id,provider,provider_reference,"
                         + "display_label,status,display_metadata,failure_code,failure_stage,idempotency_key,"
-                        + "request_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
+                        + "request_hash,is_default,select_default_on_connect,created_at,updated_at) "
+                        + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
                 pending.id(), pending.userId(), pending.gatewayId(), pending.provider(),
                 pending.providerReference(), pending.displayLabel(), pending.status(), null, null, null,
-                pending.idempotencyKey(), pending.requestHash(), Timestamp.from(pending.createdAt()));
+                pending.idempotencyKey(), pending.requestHash(), false, selectDefault,
+                Timestamp.from(pending.createdAt()));
         else localMethods.put(pending.id(), pending);
         return new ConnectAttempt(jdbc == null ? pending : method(pending.id()), true, true);
     }
@@ -209,17 +217,29 @@ final class PaymentStore {
     }
 
     synchronized Method completeConnect(Method claim, String displayMetadata) {
+        if (jdbc != null) return transactions.execute(status -> completeConnectLocked(claim, displayMetadata));
+        return completeConnectLocked(claim, displayMetadata);
+    }
+
+    private Method completeConnectLocked(Method claim, String displayMetadata) {
+        if (jdbc != null) lockUser(claim.userId());
+        boolean makeDefault = claim.selectDefaultOnConnect() || !hasActiveDefault(claim.userId());
         if (jdbc != null) {
-            int changed = jdbc.update("UPDATE payment_methods SET status='ACTIVE',display_metadata=?,"
+            if (makeDefault && claim.selectDefaultOnConnect())
+                jdbc.update("UPDATE payment_methods SET is_default=FALSE WHERE user_id=? AND is_default=TRUE",
+                        claim.userId());
+            int changed = jdbc.update("UPDATE payment_methods SET status='ACTIVE',is_default=?,display_metadata=?,"
                     + "failure_code=NULL,failure_stage=NULL,updated_at=CURRENT_TIMESTAMP "
                     + "WHERE id=? AND status='PENDING' AND updated_at=?",
-                    displayMetadata, claim.id(), Timestamp.from(claim.updatedAt()));
+                    makeDefault, displayMetadata, claim.id(), Timestamp.from(claim.updatedAt()));
             if (changed != 1) throw new Conflict("METHOD_STATE_CHANGED");
         } else {
             Method current = method(claim.id());
             if (!"PENDING".equals(current.status()) || !current.updatedAt().equals(claim.updatedAt()))
                 throw new Conflict("METHOD_STATE_CHANGED");
-            localMethods.put(claim.id(), withState(current, "ACTIVE", displayMetadata, null, null));
+            if (makeDefault && claim.selectDefaultOnConnect()) clearDefault(claim.userId());
+            Method active = withState(current, "ACTIVE", displayMetadata, null, null);
+            localMethods.put(claim.id(), withDefault(active, makeDefault));
         }
         return method(claim.id());
     }
@@ -227,6 +247,15 @@ final class PaymentStore {
     void failConnect(Method claim, String code) { fail(claim, code, "CONNECT", "PENDING"); }
 
     synchronized DeleteAttempt beginDelete(UUID id) {
+        if (jdbc != null) return transactions.execute(status -> {
+            Method current = method(id);
+            lockUser(current.userId());
+            return beginDeleteLocked(id);
+        });
+        return beginDeleteLocked(id);
+    }
+
+    private DeleteAttempt beginDeleteLocked(UUID id) {
         Method old = method(id);
         if ("PENDING".equals(old.status()) && old.updatedAt().isAfter(Instant.now().minusSeconds(30)))
             throw new Conflict("METHOD_CONNECTION_IN_PROGRESS");
@@ -244,15 +273,17 @@ final class PaymentStore {
             return new DeleteAttempt(claimed, true);
         }
         if (jdbc != null) {
-            int changed = jdbc.update("UPDATE payment_methods SET status='DELETION_PENDING',"
+            int changed = jdbc.update("UPDATE payment_methods SET status='DELETION_PENDING',is_default=FALSE,"
                     + "updated_at=CURRENT_TIMESTAMP WHERE id=? AND status=?",
                     id, old.status());
             if (changed == 0) throw new Conflict("METHOD_STATE_CHANGED");
+            if (old.isDefault()) promoteDefault(old.userId());
             return new DeleteAttempt(method(id), true);
         }
         Method claimed = withState(old, "DELETION_PENDING", old.displayMetadata(),
                 old.failureCode(), old.failureStage());
         localMethods.put(id, claimed);
+        if (old.isDefault()) promoteDefault(old.userId());
         return new DeleteAttempt(claimed, true);
     }
 
@@ -274,18 +305,76 @@ final class PaymentStore {
     void failDelete(Method claim, String code) { fail(claim, code, "DELETE", "DELETION_PENDING"); }
 
     synchronized Method updateLabel(UUID id, String label) {
+        return updatePreferences(id, label, null);
+    }
+
+    synchronized Method updatePreferences(UUID id, String label, Boolean selectDefault) {
+        if (jdbc != null) return transactions.execute(status -> {
+            Method current = method(id);
+            lockUser(current.userId());
+            return updatePreferencesLocked(id, label, selectDefault);
+        });
+        return updatePreferencesLocked(id, label, selectDefault);
+    }
+
+    private Method updatePreferencesLocked(UUID id, String label, Boolean selectDefault) {
         Method old = method(id);
+        if (Boolean.TRUE.equals(selectDefault) && !"ACTIVE".equals(old.status()))
+            throw new Conflict("METHOD_NOT_ACTIVE");
         if ("PENDING".equals(old.status()) || "DELETION_PENDING".equals(old.status()) || "FAILED".equals(old.status())
                 && "DELETE".equals(old.failureStage())) throw new Conflict("METHOD_DELETION_IN_PROGRESS");
+        if (Boolean.FALSE.equals(selectDefault) && old.isDefault())
+            throw new Conflict("DEFAULT_METHOD_REQUIRED");
         if (jdbc != null) {
-            if (jdbc.update("UPDATE payment_methods SET display_label=?,updated_at=? WHERE id=? "
+            if (Boolean.TRUE.equals(selectDefault)) {
+                clearDefault(old.userId());
+                jdbc.update("UPDATE payment_methods SET is_default=TRUE,updated_at=CURRENT_TIMESTAMP WHERE id=?", id);
+            }
+            if (label != null && jdbc.update("UPDATE payment_methods SET display_label=?,updated_at=? WHERE id=? "
                             + "AND status NOT IN ('PENDING','DELETION_PENDING') "
                             + "AND (failure_stage IS NULL OR failure_stage<>'DELETE')",
                     label, Timestamp.from(Instant.now()), id) == 0) throw new Conflict("METHOD_DELETION_IN_PROGRESS");
-        } else localMethods.put(id, new Method(old.id(), old.userId(), old.gatewayId(), old.provider(),
-                old.providerReference(), label, old.status(), old.displayMetadata(), old.failureCode(),
-                old.failureStage(), old.idempotencyKey(), old.requestHash(), old.createdAt(), Instant.now()));
+        } else {
+            if (Boolean.TRUE.equals(selectDefault)) clearDefault(old.userId());
+            localMethods.put(id, new Method(old.id(), old.userId(), old.gatewayId(), old.provider(),
+                    old.providerReference(), label == null ? old.displayLabel() : label, old.status(),
+                    old.displayMetadata(), old.failureCode(), old.failureStage(), old.idempotencyKey(),
+                    old.requestHash(), Boolean.TRUE.equals(selectDefault) || old.isDefault(),
+                    old.selectDefaultOnConnect(), old.createdAt(), Instant.now()));
+        }
         return method(id);
+    }
+
+    private void lockUser(UUID userId) {
+        jdbc.update("INSERT INTO payment_user_lifecycle(user_id) VALUES (?) ON CONFLICT DO NOTHING", userId);
+        jdbc.queryForObject("SELECT deleting FROM payment_user_lifecycle WHERE user_id=? FOR UPDATE",
+                Boolean.class, userId);
+    }
+
+    private boolean hasActiveDefault(UUID userId) {
+        if (jdbc != null) return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS(SELECT 1 FROM payment_methods WHERE user_id=? AND status='ACTIVE' AND is_default=TRUE)",
+                Boolean.class, userId));
+        return localMethods.values().stream().anyMatch(m -> userId.equals(m.userId())
+                && "ACTIVE".equals(m.status()) && m.isDefault());
+    }
+
+    private void clearDefault(UUID userId) {
+        if (jdbc != null) jdbc.update("UPDATE payment_methods SET is_default=FALSE WHERE user_id=? AND is_default=TRUE",
+                userId);
+        else localMethods.replaceAll((id, method) -> userId.equals(method.userId()) && method.isDefault()
+                ? withDefault(method, false) : method);
+    }
+
+    private void promoteDefault(UUID userId) {
+        if (jdbc != null) {
+            List<UUID> candidates = jdbc.query("SELECT id FROM payment_methods WHERE user_id=? AND status='ACTIVE' "
+                    + "ORDER BY created_at,id LIMIT 1", (rs, row) -> (UUID) rs.getObject("id"), userId);
+            if (!candidates.isEmpty()) jdbc.update("UPDATE payment_methods SET is_default=TRUE WHERE id=?",
+                    candidates.getFirst());
+        } else localMethods.values().stream().filter(m -> userId.equals(m.userId()) && "ACTIVE".equals(m.status()))
+                .min(Comparator.comparing(Method::createdAt).thenComparing(Method::id))
+                .ifPresent(m -> localMethods.put(m.id(), withDefault(m, true)));
     }
 
     private synchronized void fail(Method claim, String code, String stage, String expectedStatus) {
@@ -329,6 +418,7 @@ final class PaymentStore {
                 rs.getString("provider"), rs.getString("provider_reference"), rs.getString("display_label"),
                 rs.getString("status"), rs.getString("display_metadata"), rs.getString("failure_code"),
                 rs.getString("failure_stage"), rs.getString("idempotency_key"), rs.getString("request_hash"),
+                rs.getBoolean("is_default"), rs.getBoolean("select_default_on_connect"),
                 rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant());
     }
 
@@ -336,6 +426,14 @@ final class PaymentStore {
                                     String failureStage) {
         return new Method(old.id(), old.userId(), old.gatewayId(), old.provider(), old.providerReference(),
                 old.displayLabel(), status, displayMetadata, failureCode, failureStage, old.idempotencyKey(),
-                old.requestHash(), old.createdAt(), Instant.now());
+                old.requestHash(), old.isDefault() && "ACTIVE".equals(status), old.selectDefaultOnConnect(),
+                old.createdAt(), Instant.now());
+    }
+
+    private static Method withDefault(Method old, boolean isDefault) {
+        return new Method(old.id(), old.userId(), old.gatewayId(), old.provider(), old.providerReference(),
+                old.displayLabel(), old.status(), old.displayMetadata(), old.failureCode(), old.failureStage(),
+                old.idempotencyKey(), old.requestHash(), isDefault, old.selectDefaultOnConnect(), old.createdAt(),
+                old.updatedAt());
     }
 }

@@ -16,6 +16,15 @@ import org.springframework.web.server.WebFilter;
 public class RequestIdFilter {
     private static final Logger log = LoggerFactory.getLogger(RequestIdFilter.class);
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
+    private static final String INSTANCE_ID = instanceId();
+
+    private static String instanceId() {
+        String configured = System.getenv("SERVICE_INSTANCE_ID");
+        if (configured != null && SAFE_ID.matcher(configured).matches()) {
+            return configured;
+        }
+        return UUID.randomUUID().toString();
+    }
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -29,8 +38,8 @@ public class RequestIdFilter {
                     .build();
             traced.getResponse().getHeaders().set("X-Request-ID", id);
             return chain.filter(traced).doFinally(signal -> log.info(
-                    "{\"timestamp\":\"{}\",\"service\":\"api-gateway\",\"severity\":\"INFO\",\"traceId\":\"{}\",\"operation\":\"{}\",\"status\":\"{}\"}",
-                    Instant.now(), id, traced.getRequest().getMethod() + " " + traced.getRequest().getPath(),
+                    "{\"timestamp\":\"{}\",\"service\":\"api-gateway\",\"instanceId\":\"{}\",\"severity\":\"INFO\",\"traceId\":\"{}\",\"operation\":\"{}\",\"status\":\"{}\"}",
+                    Instant.now(), INSTANCE_ID, id, traced.getRequest().getMethod() + " " + traced.getRequest().getPath(),
                     traced.getResponse().getStatusCode() == null ? 0 : traced.getResponse().getStatusCode().value()));
         };
     }

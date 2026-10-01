@@ -138,12 +138,12 @@ scripts/load/                         # Repeatable load/failure scenarios
 **Main files:** `Jenkinsfile`; `sonar-project.properties`; `infra/compose/compose.ci.yml`; `.github/PULL_REQUEST_TEMPLATE.md`; `docs/development.md`; Java/UI test configuration.
 
 - [ ] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings. Compose services exist; Jenkins setup is not demonstrated.
-- [ ] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving. Source stages exist; UI unit tests are absent.
+- [ ] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving. Source stages and focused UI unit tests exist; a live Jenkins run remains open.
 - [ ] Check the selected SonarQube edition's PR/branch analysis capabilities. Document and demonstrate a supported per-PR analysis approach if native PR decoration is unavailable.
 - [ ] Publish test and analysis results through Jenkins and define PR checks for failed tests and quality gates. A live Jenkins run and Gitea branch protection remain to be recorded.
 - [ ] Configure the pipeline to deploy reviewed main-branch artifacts through Ansible once Phase 10 supplies the deployment playbook; PR validation must already work in this phase.
 - [x] Define descriptive branch/PR naming, Java/TypeScript naming conventions, reviewer expectations, and approval-before-merge rules in the PR template and development guide.
-- [ ] Add a dependency-update and vulnerability-review process; document how upgrades are tested and findings resolved.
+- [ ] Add a dependency-update and vulnerability-review process; document how upgrades are tested and findings resolved. npm advisory gates and a review process are documented; Java and image vulnerability review still need release evidence.
 - [ ] **Completion check:** A deliberately failing test and quality-gate violation each block a sample PR build; a corrected PR publishes passing tests and a clean quality report. Remove the deliberate failures before completing the phase.
 
 ## Phase 4 — Authentication, authorization, and secure access
@@ -235,8 +235,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Build payment-method and gateway-management screens showing provider status, safe metadata, sandbox connection flows, and pending/failed cleanup states.
 - [x] Make async actions visibly pending and guard against duplicate submissions; retain form input when recoverable validation or provider errors occur.
 - [x] Use responsive navigation, forms, tables/cards, keyboard-accessible controls, visible focus, labels, and accessible error messages.
-- [ ] Add unit tests for route protection, form validation, error rendering, and state changes after CRUD operations.
-- [ ] **Completion check:** CRUD controls, responsive layout, and expired-session handling are included in the production build; browser verification steps are documented for Chrome and Firefox. UI unit tests and the full browser matrix remain open.
+- [ ] Add unit tests for route protection, form validation, error rendering, and state changes after CRUD operations. Focused login/route and user-create retry tests now exist; the broader form and CRUD matrix remains open.
+- [ ] **Completion check:** CRUD controls, responsive layout, and expired-session handling are included in the production build; browser verification steps are documented for Chrome and Firefox. Focused UI tests pass; the full browser matrix remains open.
 
 ## Phase 9 — Request tracing and operational visibility
 
@@ -246,7 +246,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/compose/compose.observability.yml`; service logging/telemetry configuration; `docs/operations.md`; `docs/audit/tracing.md`.
 
-- [ ] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata. The new request logs lack an instance ID.
+- [ ] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata. Request logs now carry these fields; deployed format and redaction verification remains open.
 - [x] Propagate request correlation IDs through the gateway and document the OTLP collector integration point.
 - [ ] Configure an OpenTelemetry collector and justified trace/log storage and viewing tools with private, authenticated, TLS-protected access. Live export/viewer verification remains open.
 - [ ] Record admin mutations with actor ID, operation, target ID, outcome, and time while excluding credentials and sensitive payment data. Structured request logs do not yet establish actor/target mutation auditing.
@@ -262,7 +262,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/ansible/inventories/`; `infra/ansible/site.yml`; `infra/ansible/deploy.yml`; `infra/ansible/roles/`; `Jenkinsfile`; `docs/deployment.md`.
 
-- [ ] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability. The current release playbook assumes a prepared Linux host.
+- [ ] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability. Debian/Ubuntu Docker preparation is now scripted; other roles and live host setup remain open.
 - [ ] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output. Release image and secret inputs are parameterized; resource/replica settings and Vault retrieval remain open.
 - [ ] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization. Live repeat-run behavior is unverified.
 - [ ] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints. SHA tags are wired; registry immutability and live rollback remain unverified.
@@ -368,11 +368,13 @@ Add a row whenever a phase is completed or reopened. Phase completion tracks imp
 | Phase | Status | Date | PR / commit | Verification commands or evidence | Remaining issues / reopen reason |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-11 | Working tree on `feat/phase-1-foundation`; human PR review pending | Maven verify: 23 passing tests; UI production build; four clean OpenAPI contracts; [verification details](docs/phase-1-verification.md) | Docker image execution unverified because daemon is unavailable; upstream test/runtime warnings recorded in verification notes. |
+| 3 | Reopened | 2026-10-01 | `build-security-data-fixes` | Dashboard JUnit, npm advisory, and Ansible source gates added; local checks in the [essentials follow-up](docs/audit/essentials-2026-10-01.md) passed. | Configured Jenkins/Sonar/Gitea PR gate and deliberate failure demonstration remain open. |
 | 4 | Reopened | 2026-10-01 | `build-security-data-fixes` | Auth/API smoke and token revocation passed in the [local runtime run](docs/audit/runtime-verification-2026-09-30.md). | Live TLS and Vault verification remain open. |
 | 5 | Reopened | 2026-10-01 | `build-security-data-fixes` | User lifecycle smoke passed; failed-insert compensation has focused tests in the [follow-up](docs/audit/runtime-verification-2026-10-01.md). | Durable auth/users creation coordination and the full failure/retry matrix remain open. |
 | 6 | Reopened | 2026-10-01 | `build-security-data-fixes` | Neo4j aggregate tests and runtime persistence passed. | The complete deployed graph inspection and contract alignment remain open. |
 | 7 | Reopened | 2026-10-01 | `build-security-data-fixes` | Persistence and provider adapters have code and unit checks. | Sandbox credentials and customer ownership proof are unavailable; lifecycle/API items remain open. |
-| 8 | Reopened | 2026-10-01 | `build-security-data-fixes` | Production build and limited browser smoke passed. | UI unit tests and the Chrome/Firefox responsive matrix remain open. |
-| 9 | Reopened | 2026-10-01 | `build-security-data-fixes` | Request IDs reached gateway, auth, and user logs in the [follow-up](docs/audit/runtime-verification-2026-10-01.md). | Instance IDs, mutation audit records, collector export/viewing, and full metric/retention proof remain open. |
+| 8 | Reopened | 2026-10-01 | `build-security-data-fixes` | Production build, limited browser smoke, and focused route, user-create, and payment-default UI tests passed. | Broader form/CRUD tests and the Chrome/Firefox responsive matrix remain open. |
+| 9 | Reopened | 2026-10-01 | `build-security-data-fixes` | Request IDs reached gateway, auth, and user logs in the [follow-up](docs/audit/runtime-verification-2026-10-01.md); source now emits process instance IDs. | Deployed instance/format check, mutation audit records, collector export/viewing, and full metric/retention proof remain open. |
+| 10 | Reopened | 2026-10-01 | `build-security-data-fixes` | Debian/Ubuntu host preparation playbook passes local syntax/lint in the [essentials follow-up](docs/audit/essentials-2026-10-01.md). | Clean/repeat/rollback target runs, other provisioning roles, and Jenkins deployment evidence remain open. |
 | 11 | Reopened | 2026-10-01 | `build-security-data-fixes` | Backend replacement with changed IPs passed with the gateway left running. | Two-replica load, balancing, outage, and database recovery demonstrations remain open. |
 | 12 | Reopened | 2026-10-01 | `build-security-data-fixes` | [Project audit](docs/audit/project-audit-2026-09-29.md) and dated local runs list completed checks. | Live CI/deployment, providers, TLS/Vault, full browser, and replica evidence remain open. |

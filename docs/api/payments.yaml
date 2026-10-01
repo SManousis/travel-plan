@@ -6,8 +6,9 @@ info:
   description: 'Target contract. The current synchronous implementation and its response
     differences are documented in docs/payments.md. Local active-user validation is
     implemented; provider-customer ownership is not proven because no trusted binding
-    to a local user exists. Operation resources, default selection, and per-gateway
-    Vault secrets remain future work.'
+    to a local user exists. Local default selection is implemented with the current
+    controller payload documented in docs/payments.md. Operation resources and
+    per-gateway Vault secrets remain future work.'
 servers:
 - url: http://localhost:8080
   description: Loopback development gateway; deployment requires HTTPS.

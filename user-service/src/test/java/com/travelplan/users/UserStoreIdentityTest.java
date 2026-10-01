@@ -12,6 +12,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class UserStoreIdentityTest {
+    @Test void persistedUserLoadFailsStartupWhenStorageIsUnavailable() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        doThrow(new DataAccessResourceFailureException("database unavailable")).when(jdbc)
+                .query(startsWith("select id,email"), any(org.springframework.jdbc.core.RowCallbackHandler.class));
+        @SuppressWarnings("unchecked") ObjectProvider<JdbcTemplate> provider = mock(ObjectProvider.class);
+        @SuppressWarnings("unchecked") ObjectProvider<PlatformTransactionManager> managers = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(jdbc);
+        when(managers.getIfAvailable()).thenReturn(mock(PlatformTransactionManager.class));
+        UserStore store = new UserStore(mock(RevocationClient.class), mock(AuthProvisionClient.class), provider, managers);
+
+        assertThrows(DataAccessResourceFailureException.class, store::loadPersisted);
+    }
+
     @Test void failedUserInsertDoesNotReserveEmailInLocalCache() {
         JdbcTemplate jdbc = new JdbcTemplate() {
             private int attempts;

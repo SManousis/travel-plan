@@ -1,2 +1,5 @@
 ---
-- import_playbook: deploy.yml
+- name: Prepare the release host
+  import_playbook: prepare.yml
+- name: Deploy the release
+  import_playbook: deploy.yml
