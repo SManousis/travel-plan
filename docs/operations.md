@@ -1,12 +1,12 @@
 # Operations
 
-`infra/ansible/site.yml` deploys the Compose environment repeatably. Credentials are supplied through Ansible Vault or an external secret manager. The scale override demonstrates two instances of each application service:
+`infra/ansible/site.yml` prepares a Debian/Ubuntu host and deploys the Compose environment. Credentials are supplied through Ansible Vault or an external secret manager. For a disposable stack already running on the base Compose file, scale a business service without a published host port:
 
 ```sh
-docker compose -f infra/compose/compose.yml -f infra/compose/compose.scale.yml up -d --scale api-gateway=2
+docker compose -f infra/compose/compose.yml up -d --scale user-service=2 user-service
 ```
 
-Application health checks and private management ports are used for readiness. Database replication and failover remain separate concerns because named volumes do not provide database high availability.
+The base Compose file publishes gateway port `8080`, so two gateway replicas need a separately reviewed ingress/port override; the scale example above only tests user-service. See the [manual testing guide](audit/manual-testing-guide.md#8-replica-and-failure-checks) for the observed checks. Application health checks and private management ports are used for readiness. Database replication and failover remain separate concerns because named volumes do not provide database high availability.
 
 ## Upgrading an existing installation to persisted auth identities
 
