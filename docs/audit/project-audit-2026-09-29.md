@@ -20,6 +20,8 @@ A failed user-profile insert now attempts to disable the identity provisioned ju
 
 The [phase checklist](../../plan.md) was reconciled with this evidence: Phases 4–9 and 11–12 are reopened until their remaining implementation and demonstration criteria are met. The original baseline comparison later in this document is historical and still describes the 2026-09-29 state.
 
+An opt-in local payment simulator now exercises Stripe-shaped and PayPal-shaped references with generated synthetic credentials. The [runtime follow-up](runtime-verification-2026-10-01.md#local-payment-simulation--2026-10-01) records both methods reaching `ACTIVE` and being deleted through the API, with two active demo records retained afterward. This closes a local simulation gap only; no provider-issued sandbox credential or reference was used, and customer ownership remains unproven.
+
 ## Remediation follow-up — 2026-09-30
 
 The initial findings below describe the 2026-09-29 baseline. On branch `build-security-data-fixes`, the first remediation package closed the **backend build blocker** and the **access-token revocation gap at API boundaries**:

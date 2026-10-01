@@ -9,21 +9,27 @@ import org.springframework.stereotype.Component;
 
 @Component
 public final class PayPalAdapter implements ProviderAdapter {
-    private static final String BASE = "https://api-m.sandbox.paypal.com";
+    private static final String REAL_BASE = "https://api-m.sandbox.paypal.com";
     private final String clientId;
     private final String clientSecret;
+    private final String baseUrl;
+    private final boolean simulated;
 
     public PayPalAdapter(@Value("${payments.paypal.client-id:}") String clientId,
-                         @Value("${payments.paypal.client-secret:}") String clientSecret) {
+                         @Value("${payments.paypal.client-secret:}") String clientSecret,
+                         @Value("${payments.simulation.enabled:false}") boolean simulated,
+                         @Value("${payments.simulation.base-url:}") String simulatorBaseUrl) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.simulated = simulated;
+        this.baseUrl = ProviderApiEndpoint.baseUrl(simulated, simulatorBaseUrl, REAL_BASE);
     }
 
     @Override public String provider() { return "PAYPAL"; }
 
     @Override public ProviderResult connect(String reference, String idempotencyKey) {
         validateReference(reference);
-        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + "/v3/vault/payment-tokens/" + reference))
+        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(baseUrl + "/v3/vault/payment-tokens/" + reference))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + accessToken())
                 .header("Accept", "application/json").GET().build());
         SandboxHttp.requireSuccess(response.statusCode());
@@ -41,7 +47,7 @@ public final class PayPalAdapter implements ProviderAdapter {
 
     @Override public void detach(String reference, String idempotencyKey) {
         validateReference(reference);
-        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + "/v3/vault/payment-tokens/" + reference))
+        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(baseUrl + "/v3/vault/payment-tokens/" + reference))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + accessToken())
                 .DELETE().build());
         if (response.statusCode() == 404) throw new Rejected("PROVIDER_REFERENCE_NOT_FOUND");
@@ -49,11 +55,11 @@ public final class PayPalAdapter implements ProviderAdapter {
     }
 
     private String accessToken() {
-        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank())
+        if (!credentialsAllowed(clientId, clientSecret, simulated))
             throw new Unavailable("PAYPAL_SANDBOX_CREDENTIAL_MISSING");
         String basic = Base64.getEncoder().encodeToString((clientId + ":" + clientSecret)
                 .getBytes(StandardCharsets.UTF_8));
-        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + "/v1/oauth2/token"))
+        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(baseUrl + "/v1/oauth2/token"))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Basic " + basic)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials")).build());
@@ -61,6 +67,14 @@ public final class PayPalAdapter implements ProviderAdapter {
         String token = SandboxHttp.json(response.body()).path("access_token").asString();
         if (token.isBlank()) throw new Unavailable("PROVIDER_INVALID_RESPONSE");
         return token;
+    }
+
+    static boolean credentialsAllowed(String clientId, String clientSecret, boolean simulated) {
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank())
+            return false;
+        if (simulated)
+            return clientId.startsWith("sim_client_") && clientSecret.startsWith("sim_secret_");
+        return !clientId.startsWith("sim_client_") && !clientSecret.startsWith("sim_secret_");
     }
 
     private static void validateReference(String reference) {

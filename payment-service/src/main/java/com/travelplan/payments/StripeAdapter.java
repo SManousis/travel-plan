@@ -7,18 +7,24 @@ import org.springframework.stereotype.Component;
 
 @Component
 public final class StripeAdapter implements ProviderAdapter {
-    private static final String BASE = "https://api.stripe.com/v1/payment_methods/";
+    private static final String REAL_BASE = "https://api.stripe.com";
     private final String secretKey;
+    private final String baseUrl;
+    private final boolean simulated;
 
-    public StripeAdapter(@Value("${payments.stripe.secret-key:}") String secretKey) {
+    public StripeAdapter(@Value("${payments.stripe.secret-key:}") String secretKey,
+                         @Value("${payments.simulation.enabled:false}") boolean simulated,
+                         @Value("${payments.simulation.base-url:}") String simulatorBaseUrl) {
         this.secretKey = secretKey;
+        this.simulated = simulated;
+        this.baseUrl = ProviderApiEndpoint.baseUrl(simulated, simulatorBaseUrl, REAL_BASE);
     }
 
     @Override public String provider() { return "STRIPE"; }
 
     @Override public ProviderResult connect(String reference, String idempotencyKey) {
         validateReference(reference);
-        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + reference))
+        var response = SandboxHttp.send(HttpRequest.newBuilder(URI.create(baseUrl + "/v1/payment_methods/" + reference))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + credential())
                 .header("Accept", "application/json").GET().build());
         SandboxHttp.requireSuccess(response.statusCode());
@@ -38,7 +44,7 @@ public final class StripeAdapter implements ProviderAdapter {
     @Override public void detach(String reference, String idempotencyKey) {
         validateReference(reference);
         String key = credential();
-        var inspected = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + reference))
+        var inspected = SandboxHttp.send(HttpRequest.newBuilder(URI.create(baseUrl + "/v1/payment_methods/" + reference))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + key)
                 .header("Accept", "application/json").GET().build());
         if (inspected.statusCode() == 404) throw new Rejected("PROVIDER_REFERENCE_NOT_FOUND");
@@ -48,14 +54,16 @@ public final class StripeAdapter implements ProviderAdapter {
                 || body.path("livemode").asBoolean())
             throw new Rejected("PROVIDER_REFERENCE_MISMATCH");
         if (!body.path("customer").isTextual() || body.path("customer").asString().isBlank()) return;
-        var detached = SandboxHttp.send(HttpRequest.newBuilder(URI.create(BASE + reference + "/detach"))
+        var detached = SandboxHttp.send(HttpRequest.newBuilder(URI.create(baseUrl + "/v1/payment_methods/" + reference + "/detach"))
                 .timeout(SandboxHttp.timeout()).header("Authorization", "Bearer " + key)
                 .header("Idempotency-Key", idempotencyKey).POST(HttpRequest.BodyPublishers.noBody()).build());
         SandboxHttp.requireSuccess(detached.statusCode());
     }
 
     private String credential() {
-        if (secretKey == null || !secretKey.startsWith("sk_test_") || secretKey.isBlank())
+        if (secretKey == null || secretKey.isBlank()
+                || (simulated && !secretKey.startsWith("sk_test_sim_"))
+                || (!simulated && (!secretKey.startsWith("sk_test_") || secretKey.startsWith("sk_test_sim_"))))
             throw new Unavailable("STRIPE_SANDBOX_CREDENTIAL_MISSING");
         return secretKey;
     }

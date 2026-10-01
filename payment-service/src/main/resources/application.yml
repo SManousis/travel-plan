@@ -12,6 +12,9 @@ services:
   user:
     url: ${USER_SERVICE_URL:http://127.0.0.1:8082}
 payments:
+  simulation:
+    enabled: ${PAYMENT_SIMULATION_ENABLED:false}
+    base-url: ${PAYMENT_SIMULATOR_BASE_URL:}
   stripe:
     secret-key: ${STRIPE_SANDBOX_SECRET_KEY:}
   paypal:

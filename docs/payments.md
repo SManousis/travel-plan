@@ -1,6 +1,27 @@
 # Payment sandbox operations
 
-Payment-service stores gateway and payment-method metadata in PostgreSQL when the `infra` profile is active. The default profile keeps a local in-memory store for startup and development. Provider adapters always contact the configured sandbox during method creation or deletion; they do not accept a reference merely because it is nonempty.
+Payment-service stores gateway and payment-method metadata in PostgreSQL when the `infra` profile is active. The default profile keeps a local in-memory store for startup and development. Provider adapters contact the real provider sandbox by default. The opt-in local simulator below lets developers exercise the flow without provider accounts; neither mode accepts a reference merely because it is nonempty.
+
+## Local simulation without provider accounts
+
+The local simulator uses **synthetic credentials and references**. It is separate from Stripe and PayPal and moves no money. Generate the ignored `.env.payment-sim` file from the repository root, then start the isolated Compose project:
+
+```powershell
+node scripts/sandbox/create-sim-env.mjs
+docker compose --env-file .env.payment-sim -p travel-plan-payment-sim -f infra/compose/compose.yml -f infra/compose/compose.payment-sim.yml up -d --build --wait admin-ui
+.\scripts\sandbox\smoke-payment-sim.ps1
+```
+
+The generator refuses to overwrite an existing `.env.payment-sim`. The API is on `http://127.0.0.1:18080` and the dashboard is on `http://127.0.0.1:15173`. The admin username is `sim-admin`; read `ADMIN_PASSWORD` from your local ignored env file. The simulator is private to the Compose network and accepts only the generated fake credentials. It exposes these fixed references and fake customer IDs:
+
+| Provider | Payment-method reference | Simulated customer ID | Display metadata |
+|---|---|---|---|
+| Stripe | `pm_simulatedvisa001` | `cus_simulated001` | `visa •••• 4242` |
+| PayPal | `VAULT_SIM_001` | `PAYPAL_SIM_CUSTOMER_001` | `VISA •••• 1111` |
+
+The smoke script creates a local user and both gateways, connects the two references, verifies `ACTIVE`, and deletes them through the application API. Run it with `-KeepMethods` to leave the methods visible in the dashboard. Before running the script again after `-KeepMethods`, delete those retained methods through the application API or reset this isolated project's database; the fixed references must be unique. A deletion changes the simulator's in-memory reference state, so restart `payment-simulator` before reusing the references. Run `npm run test:payment-sim` for the mock-provider and credential-generator tests. To remove its containers and synthetic database volumes, run the same Compose command with `down -v` in place of `up -d --build --wait admin-ui`. The ignored `.env.payment-sim` file remains until you remove it separately.
+
+This simulation checks application wiring, state transitions, and safe display data. It does **not** prove that Stripe or PayPal issued credentials/tokens, that their APIs accepted calls, or that a local user owns a provider customer. Real sandbox credentials and an ownership mapping are still required for those checks.
 
 ## Credentials and reference handoff
 

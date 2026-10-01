@@ -36,6 +36,8 @@ A later [isolated runtime verification](audit/runtime-verification-2026-09-30.md
 
 The [2026-10-01 runtime follow-up](audit/runtime-verification-2026-10-01.md) fixed the gateway's routed and auth-validation DNS refresh and confirmed a backend replacement with changed container IPs while the gateway stayed up. Request IDs now reach gateway, auth, and user logs, including controlled denial logging. Failed user inserts attempt to disable the provisioned auth subject and do not reserve the local email cache. The complete Maven reactor passed 73 tests. Durable cross-database creation/reconciliation, multi-replica recovery, and live external integrations remain open.
 
+An opt-in [local payment simulator](payments.md#local-simulation-without-provider-accounts) now generates ignored synthetic credentials and exposes fake Stripe/PayPal references for API and dashboard rehearsal. The adapter, mock-provider, and gateway-to-payment flows passed local tests; the complete Maven reactor passed 76 tests after this addition. Real provider sandbox calls and customer ownership remain unverified.
+
 ## Remaining before the exercise audit
 
 1. Configure Jenkins, SonarQube, a CI agent, and Gitea branch protection; demonstrate that failed PR checks block merging. UI lint and source pipeline wiring exist, while dependency review and native PR Sonar analysis remain open.
