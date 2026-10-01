@@ -11,3 +11,4 @@
 .worktrees/
 .superpowers/
 infra/tls/certs/
+.ci-secrets/

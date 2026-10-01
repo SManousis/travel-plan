@@ -8,13 +8,17 @@ import java.time.Duration;
 import tools.jackson.databind.json.JsonMapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "management.server.port=0")
+@ExtendWith(OutputCaptureExtension.class)
 class StartupTest {
 
     @Value("${local.server.port}")
@@ -44,6 +48,19 @@ class StartupTest {
             assertThat(get(client, applicationPort, "/internal/cleanup").statusCode()).isEqualTo(404);
             assertThat(get(client, managementPort, "/actuator/env").statusCode()).isEqualTo(404);
         }
+    }
+
+    @Test
+    void logsRequestIdWithoutBearerToken(CapturedOutput output) throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + applicationPort + "/api/travels"))
+                .header("X-Request-ID", "trace-travel-check")
+                .header("Authorization", "Bearer private-test-token").GET().build();
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            assertThat(client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(401);
+        }
+        assertThat(output.getOut()).contains("\"service\":\"travel-service\"")
+                .contains("\"traceId\":\"trace-travel-check\"")
+                .doesNotContain("private-test-token");
     }
 
     private HttpResponse<String> get(HttpClient client, int port, String path) throws Exception {

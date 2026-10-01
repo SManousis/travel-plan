@@ -20,15 +20,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @Component
 public class AdminTokenFilter extends OncePerRequestFilter {
     private final byte[] secret;
-    public AdminTokenFilter(@Value("${security.token-secret:replace-with-at-least-32-random-characters}") String secret) {
+    private final AuthTokenValidator validator;
+    public AdminTokenFilter(@Value("${security.token-secret:replace-with-at-least-32-random-characters}") String secret,
+            AuthTokenValidator validator) {
         if (secret.length() < 32) throw new IllegalArgumentException("security.token-secret must contain at least 32 characters");
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
+        this.validator = validator;
     }
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         if (!request.getRequestURI().startsWith("/api/")) { chain.doFilter(request, response); return; }
         Claims claims = verify(request.getHeader("Authorization"));
         if (claims == null) { response.sendError(401, "Authentication required"); return; }
         if (!"ADMIN".equals(claims.role)) { response.sendError(403, "Administrator role required"); return; }
+        AuthTokenValidator.Result result = validator.validate(request.getHeader("Authorization"));
+        if (result == AuthTokenValidator.Result.DENIED) { response.sendError(401, "Token revoked"); return; }
+        if (result == AuthTokenValidator.Result.UNAVAILABLE) { response.sendError(503, "Authentication service unavailable"); return; }
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(claims.subject, null,
                 java.util.List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
         chain.doFilter(request, response);

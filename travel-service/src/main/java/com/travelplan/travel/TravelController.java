@@ -16,6 +16,7 @@ import jakarta.validation.Valid; import jakarta.validation.constraints.*; import
  @DeleteMapping("/api/travels/{id}/travelers/{travelerId}") @ResponseStatus(HttpStatus.NO_CONTENT) void remove(@PathVariable UUID id,@PathVariable UUID travelerId){store.removeParticipant(id,travelerId);}
  @ExceptionHandler(TravelStore.NotFound.class) ResponseEntity<Error> missing(){return ResponseEntity.status(404).body(new Error("NOT_FOUND","Resource not found"));}
  @ExceptionHandler(TravelStore.Conflict.class) ResponseEntity<Error> conflict(TravelStore.Conflict e){return ResponseEntity.status(409).body(new Error(e.code,"Request conflicts with current state"));}
+ @ExceptionHandler(org.neo4j.driver.exceptions.Neo4jException.class) ResponseEntity<Error> graphUnavailable(){return ResponseEntity.status(503).body(new Error("TRAVEL_STORE_UNAVAILABLE","Travel storage unavailable"));}
  @ExceptionHandler({MethodArgumentNotValidException.class,IllegalArgumentException.class}) ResponseEntity<Error> invalid(){return ResponseEntity.badRequest().body(new Error("INVALID_REQUEST","Request validation failed"));}
  private static <T> Page<T> page(List<T> all,int p,int size){if(p<0||size<1||size>100)throw new IllegalArgumentException();int from=Math.min(p*size,all.size());return new Page<>(all.subList(from,Math.min(from+size,all.size())),p,size,all.size());}
  private static List<TravelDomain.Stop> stops(List<StopWrite>x){return x.stream().map(s->new TravelDomain.Stop(UUID.randomUUID(),s.destinationId(),s.position(),s.arrivalDate(),s.departureDate())).toList();}

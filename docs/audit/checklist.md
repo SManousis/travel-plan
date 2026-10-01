@@ -1,6 +1,6 @@
 # Final audit checklist
 
-This checklist maps the upstream exercise requirements (microservices, PostgreSQL/Neo4j, Jenkins/SonarQube, Docker/Ansible, logging, admin CRUD, Stripe/PayPal, authentication, responsive Chrome/Firefox UI, tests, TLS, Vault, least privilege, and PR review) to local evidence.
+This checklist maps the upstream exercise requirements (microservices, PostgreSQL/Neo4j, Jenkins/SonarQube, Docker/Ansible, logging, admin CRUD, Stripe/PayPal, authentication, responsive Chrome/Firefox UI, tests, TLS, Vault, least privilege, and PR review) to local evidence. Follow the [manual testing guide](manual-testing-guide.md) for the order, commands, expected outcomes, and results template.
 
 | Area | Demonstration | Evidence |
 |---|---|---|

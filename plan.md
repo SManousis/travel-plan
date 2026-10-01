@@ -28,18 +28,20 @@
 - [x] Phase 1 — Architecture, contracts, and runnable project skeleton
 - [x] Phase 2 — Containerized databases and local infrastructure
 - [ ] Phase 3 — Jenkins, SonarQube, and PR workflow
-- [x] Phase 4 — Authentication, authorization, and secure access
-- [x] Phase 5 — User and traveler management
-- [x] Phase 6 — Travel and itinerary management
-- [x] Phase 7 — Payment methods and gateway integrations
-- [x] Phase 8 — Responsive Admin Dashboard
-- [x] Phase 9 — Request tracing and operational visibility
-- [x] Phase 10 — Automated deployment with Ansible
-- [x] Phase 11 — Replicas, load balancing, and failure recovery
-- [x] Phase 12 — Security review and full audit rehearsal
+- [ ] Phase 4 — Authentication, authorization, and secure access
+- [ ] Phase 5 — User and traveler management
+- [ ] Phase 6 — Travel and itinerary management
+- [ ] Phase 7 — Payment methods and gateway integrations
+- [ ] Phase 8 — Responsive Admin Dashboard
+- [ ] Phase 9 — Request tracing and operational visibility
+- [ ] Phase 10 — Automated deployment with Ansible
+- [ ] Phase 11 — Replicas, load balancing, and failure recovery
+- [ ] Phase 12 — Security review and full audit rehearsal
 - [ ] Bonus A — Extended application and database documentation
 - [ ] Bonus B — Automated integration and browser E2E suites
 - [ ] Bonus C — Kubernetes managed with Ansible
+
+The 2026-10-01 audit follow-up reopens phases whose full completion checks lack implementation or recorded runtime evidence. The checked subitems below still identify work already present; the dated findings and remaining limits are in [the project audit](docs/audit/project-audit-2026-09-29.md) and [runtime follow-up](docs/audit/runtime-verification-2026-10-01.md).
 
 ## Scope and design rules
 
@@ -135,13 +137,13 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `Jenkinsfile`; `sonar-project.properties`; `infra/compose/compose.ci.yml`; `.github/PULL_REQUEST_TEMPLATE.md`; `docs/development.md`; Java/UI test configuration.
 
-- [x] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings.
-- [x] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving.
+- [ ] Provision persistent Jenkins and SonarQube instances and configure authenticated repository integration; inject credentials through protected secret bindings. Compose services exist; Jenkins setup is not demonstrated.
+- [ ] Add pipeline stages for checkout, backend build/unit tests, UI lint/unit tests/build, SonarQube analysis, quality-gate enforcement, and artifact archiving. Source stages and focused UI unit tests exist; a live Jenkins run remains open.
 - [ ] Check the selected SonarQube edition's PR/branch analysis capabilities. Document and demonstrate a supported per-PR analysis approach if native PR decoration is unavailable.
-- [x] Publish test and analysis results through Jenkins and define PR checks for failed tests and quality gates.
+- [ ] Publish test and analysis results through Jenkins and define PR checks for failed tests and quality gates. A live Jenkins run and Gitea branch protection remain to be recorded.
 - [ ] Configure the pipeline to deploy reviewed main-branch artifacts through Ansible once Phase 10 supplies the deployment playbook; PR validation must already work in this phase.
 - [x] Define descriptive branch/PR naming, Java/TypeScript naming conventions, reviewer expectations, and approval-before-merge rules in the PR template and development guide.
-- [ ] Add a dependency-update and vulnerability-review process; document how upgrades are tested and findings resolved.
+- [ ] Add a dependency-update and vulnerability-review process; document how upgrades are tested and findings resolved. npm advisory gates and a review process are documented; Java and image vulnerability review still need release evidence.
 - [ ] **Completion check:** A deliberately failing test and quality-gate violation each block a sample PR build; a corrected PR publishes passing tests and a clean quality report. Remove the deliberate failures before completing the phase.
 
 ## Phase 4 — Authentication, authorization, and secure access
@@ -161,7 +163,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Configure Vault policy templates and per-service credential scopes; deployment-time injection, rotation, and unseal procedures are documented in `infra/vault/`.
 - [x] Restrict operational endpoints and CI administration to private management/loopback interfaces and document scoped deployment identities.
 - [x] Add unit tests for valid credentials, expired/tampered tokens, and revoked sessions; live gateway/service checks cover wrong-role and unauthenticated denial.
-- [x] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds through the secure HTTPS proxy and credentials are absent from repository files and logs.
+- [ ] **Completion check:** Admin requests succeed; unauthenticated requests return `401`; authenticated non-admin requests return `403`, including direct internal API access. Certificate verification succeeds through the secure HTTPS proxy and credentials are absent from repository files and logs. Live TLS/Vault verification remains open.
 
 ## Phase 5 — User and traveler management
 
@@ -175,11 +177,11 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 - [x] Implement paginated list, detail, create, update, and delete endpoints for users and traveler profiles; link each traveler to an existing user.
 - [x] Validate required fields and email format/uniqueness; return `409` for duplicate emails and `404` for missing IDs without leaking sensitive fields.
-- [x] Coordinate user creation with auth credential provisioning using an idempotent operation ID; handle provisioning failure without leaving an active account with incomplete identity data.
+- [ ] Coordinate user creation with auth credential provisioning using an idempotent operation ID; handle provisioning failure without leaving an active account with incomplete identity data. Failed inserts now trigger best-effort identity disablement; durable coordination remains open.
 - [x] Implement role/status updates and safe self-management rules, including preventing deletion or demotion of the last active administrator.
 - [x] Persist user-deletion progress, revoke access first, and define idempotent cleanup contracts for traveler profiles, payment methods, and travel participation. Wire payment/travel consumers in Phases 6–7.
-- [x] Add unit tests for CRUD success, duplicate emails, invalid traveler ownership, missing users, last-admin protection, provisioning retries, and deletion retries.
-- [x] **Completion check:** The user/traveler API smoke scenario completes CRUD as an admin and verifies validation failures, access denial, and repeat-safe lifecycle behavior against currently available services.
+- [ ] Add unit tests for CRUD success, duplicate emails, invalid traveler ownership, missing users, last-admin protection, provisioning retries, and deletion retries. Coverage exists for selected paths; the complete matrix remains open.
+- [ ] **Completion check:** The user/traveler API smoke scenario completes CRUD as an admin and verifies validation failures, access denial, and repeat-safe lifecycle behavior against currently available services. The full failure/retry matrix remains open.
 
 ## Phase 6 — Travel and itinerary management
 
@@ -198,7 +200,7 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Provide destination CRUD and a documented `409` policy for deleting a destination still used by a trip; allow admins to reassign/remove references before deletion.
 - [x] Link traveler IDs to travel participation and implement the idempotent user-deletion cleanup contract without removing shared travel records.
 - [x] Add unit tests for multi-destination itineraries, duration calculation, reversed dates, missing destinations, missing IDs, shared-node preservation, and retry-safe participant cleanup.
-- [x] **Completion check:** Create and edit a complete multi-destination travel, then delete it and inspect the graph to confirm that no owned orphan nodes remain and shared records survive.
+- [ ] **Completion check:** Create and edit a complete multi-destination travel, then delete it and inspect the graph to confirm that no owned orphan nodes remain and shared records survive. Focused graph tests pass; a complete recorded deployed graph inspection remains open.
 
 ## Phase 7 — Payment methods and gateway integrations
 
@@ -216,8 +218,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [ ] Use timeouts, safe error messages, idempotency keys where supported, and durable pending/retry states when provider and local changes cannot complete together.
 - [ ] Reject deleting an in-use gateway with `409` until its methods are detached/reassigned; revoke linked methods through the user-deletion workflow and retain visible failure status if provider cleanup fails.
 - [ ] If the selected provider flow requires webhooks, verify signatures, deduplicate event IDs, and reject unverified events.
-- [x] Add adapter/service unit tests for both providers, invalid ownership, duplicate requests, timeouts, provider rejection, missing methods, and cleanup retries.
-- [x] **Completion check:** Demonstrate create/connect, read, supported update, and remove/disable behavior for each provider using sandbox references and controlled provider errors.
+- [ ] Add adapter/service unit tests for both providers, invalid ownership, duplicate requests, timeouts, provider rejection, missing methods, and cleanup retries. Trusted provider-customer ownership proof remains open.
+- [ ] **Completion check:** Demonstrate create/connect, read, supported update, and remove/disable behavior for each provider using sandbox references and controlled provider errors. Sandbox credentials and ownership mapping are unavailable.
 
 ## Phase 8 — Responsive Admin Dashboard
 
@@ -233,8 +235,8 @@ scripts/load/                         # Repeatable load/failure scenarios
 - [x] Build payment-method and gateway-management screens showing provider status, safe metadata, sandbox connection flows, and pending/failed cleanup states.
 - [x] Make async actions visibly pending and guard against duplicate submissions; retain form input when recoverable validation or provider errors occur.
 - [x] Use responsive navigation, forms, tables/cards, keyboard-accessible controls, visible focus, labels, and accessible error messages.
-- [ ] Add unit tests for route protection, form validation, error rendering, and state changes after CRUD operations.
-- [x] **Completion check:** CRUD controls, responsive layout, and expired-session handling are included in the production build; browser verification steps are documented for Chrome and Firefox.
+- [ ] Add unit tests for route protection, form validation, error rendering, and state changes after CRUD operations. Focused login/route and user-create retry tests now exist; the broader form and CRUD matrix remains open.
+- [ ] **Completion check:** CRUD controls, responsive layout, and expired-session handling are included in the production build; browser verification steps are documented for Chrome and Firefox. Focused UI tests pass; the full browser matrix remains open.
 
 ## Phase 9 — Request tracing and operational visibility
 
@@ -244,11 +246,11 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/compose/compose.observability.yml`; service logging/telemetry configuration; `docs/operations.md`; `docs/audit/tracing.md`.
 
-- [x] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata.
+- [ ] Emit structured logs containing timestamp, service name, instance ID, severity, trace ID, and safe operation metadata. Request logs now carry these fields; deployed format and redaction verification remains open.
 - [x] Propagate request correlation IDs through the gateway and document the OTLP collector integration point.
-- [x] Configure an OpenTelemetry collector and justified trace/log storage and viewing tools with private, authenticated, TLS-protected access.
-- [x] Record admin mutations with actor ID, operation, target ID, outcome, and time while excluding credentials and sensitive payment data.
-- [x] Expose private readiness, liveness, request latency, error count, and instance metrics; define retention and redact sensitive fields.
+- [ ] Configure an OpenTelemetry collector and justified trace/log storage and viewing tools with private, authenticated, TLS-protected access. Live export/viewer verification remains open.
+- [ ] Record admin mutations with actor ID, operation, target ID, outcome, and time while excluding credentials and sensitive payment data. Structured request logs do not yet establish actor/target mutation auditing.
+- [ ] Expose private readiness, liveness, request latency, error count, and instance metrics; define retention and redact sensitive fields. The complete metric and retention proof remains open.
 - [x] Add focused tests for context propagation and redaction where application code performs them.
 - [x] **Completion check:** Find participating gateway/service logs for successful and failed requests using one propagated request ID; the collector integration point and verification procedure are documented.
 
@@ -260,14 +262,14 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `infra/ansible/inventories/`; `infra/ansible/site.yml`; `infra/ansible/deploy.yml`; `infra/ansible/roles/`; `Jenkinsfile`; `docs/deployment.md`.
 
-- [x] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability.
-- [x] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output.
-- [x] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization.
-- [x] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints.
-- [x] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results.
-- [x] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
-- [x] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
-- [x] **Completion check:** Clean and repeat deployment procedures, rollback, secret handling, and readiness evidence are documented and wired to the reviewed main-branch pipeline.
+- [ ] Create roles for host prerequisites, Docker, networks, persistent storage, certificates, Vault, PostgreSQL, Neo4j, application services, the proxy, Jenkins, SonarQube, and observability. Debian/Ubuntu Docker preparation is now scripted; other roles and live host setup remain open.
+- [ ] Parameterize inventory, resource limits, replica counts, image versions, hostnames, and environment settings; retrieve secrets securely and suppress secret-bearing task output. Release image and secret inputs are parameterized; resource/replica settings and Vault retrieval remain open.
+- [ ] Use declarative modules, templates, change-triggered handlers, readiness checks, and repeat-safe migrations; avoid unconditional restarts and destructive volume initialization. Live repeat-run behavior is unverified.
+- [ ] Deploy immutable image tags/digests with staged readiness checks and document application rollback plus migration compatibility constraints. SHA tags are wired; registry immutability and live rollback remain unverified.
+- [ ] Connect the reviewed main-branch Jenkins pipeline to image publication and the Ansible deployment playbook; retain deployment logs and health-check results. Source wiring exists; no live Jenkins run is recorded.
+- [ ] Validate playbook syntax and linting, then run provisioning/deployment on a clean audit environment.
+- [ ] Run the same playbooks a second time; inspect recap/change reasons and verify that data remains intact and healthy services are not unnecessarily interrupted.
+- [ ] **Completion check:** Clean and repeat deployment procedures, rollback, secret handling, and readiness evidence are documented and wired to the reviewed main-branch pipeline.
 
 ## Phase 11 — Replicas, load balancing, and failure recovery
 
@@ -279,15 +281,15 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** Deployment Compose/proxy configuration; Ansible replica settings; `scripts/load/`; `docs/audit/resilience.md`; service timeout/retry configuration.
 
-- [x] Run at least two instances of each application microservice and gateway, with balancing at ingress and downstream service routes; avoid fixed container names or host-port collisions that prevent scaling.
+- [ ] Run at least two instances of each application microservice and gateway, with balancing at ingress and downstream service routes; avoid fixed container names or host-port collisions that prevent scaling. No two-replica run is recorded.
 - [x] Keep authentication and request handling compatible with multiple instances; place revocation/session state in the shared owned datastore rather than process memory.
-- [x] Route only to healthy instances and support graceful shutdown. Add bounded retries for safe operations, idempotency for retried writes, and timeout/circuit-breaker behavior for dependencies.
-- [x] Create an authenticated repeatable load scenario with representative user, travel, and payment metadata operations. Set and record an environment-specific latency/error target and concurrency before running it.
-- [x] Verify instance IDs in logs show balanced traffic and that increasing only one service's replica count does not require rebuilding or restarting unrelated services.
-- [x] Stop one instance while load runs; confirm traffic reaches the survivors, data stays consistent, and recovery restores capacity.
-- [x] Stop all instances of one business service; verify unrelated admin areas remain usable and affected operations fail clearly without cascading timeouts. Restore the service and confirm pending work can recover.
-- [x] Restart database containers and demonstrate persistence/reconnection. Document single-host, ingress, and database failure limits rather than claiming full infrastructure high availability.
-- [x] **Completion check:** Replica configuration, load script, instance-loss, outage, and recovery procedures are documented and repeatable.
+- [ ] Route only to healthy instances and support graceful shutdown. Add bounded retries for safe operations, idempotency for retried writes, and timeout/circuit-breaker behavior for dependencies. A single-replica backend replacement probe passed; full behavior remains open.
+- [ ] Create an authenticated repeatable load scenario with representative user, travel, and payment metadata operations. Set and record an environment-specific latency/error target and concurrency before running it.
+- [ ] Verify instance IDs in logs show balanced traffic and that increasing only one service's replica count does not require rebuilding or restarting unrelated services.
+- [ ] Stop one instance while load runs; confirm traffic reaches the survivors, data stays consistent, and recovery restores capacity.
+- [ ] Stop all instances of one business service; verify unrelated admin areas remain usable and affected operations fail clearly without cascading timeouts. Restore the service and confirm pending work can recover.
+- [ ] Restart database containers and demonstrate persistence/reconnection. Document single-host, ingress, and database failure limits rather than claiming full infrastructure high availability.
+- [ ] **Completion check:** Replica configuration, load script, instance-loss, outage, and recovery procedures are documented and repeatable.
 
 ## Phase 12 — Security review and full audit rehearsal
 
@@ -297,18 +299,18 @@ scripts/load/                         # Repeatable load/failure scenarios
 
 **Main files:** `docs/audit/checklist.md`; `docs/audit/evidence.md`; `scripts/smoke/`; `README.md`; any focused fixes found during rehearsal.
 
-- [x] Convert every question in the linked audit into a local checklist with a demonstration command/action and evidence location; re-read the upstream exercise and audit for changes before final delivery.
-- [x] Demonstrate architecture boundaries, independent deployment/scaling, gateway routing, partial-failure behavior, and cross-service tracing.
-- [x] Demonstrate PostgreSQL and Neo4j schemas with real stored examples and explain ownership, constraints, indexes, transactions, and cleanup rules.
-- [x] Run administrator create/read/update/delete scenarios for users, travelers, travels, payment methods, gateways, and related itinerary records; include duplicate, missing, invalid, and dependency-failure cases.
-- [x] Finish and verify the complete user-deletion workflow across auth, users, travel, and payments; retry interrupted cleanup and confirm no active credentials or orphaned owned references remain.
-- [x] Verify unauthenticated/non-admin denial on every business endpoint, direct-service protection, least-privilege database/Vault policies, verified TLS on every network path, and private operational interfaces.
-- [x] Inspect repository/history and logs for accidental secrets; rotate any exposed credentials and verify documented credential/certificate rotation procedures.
-- [x] Run the full backend unit suite and UI unit/lint/build checks; review the latest PR SonarQube report for blocking errors, dependency warnings, and unresolved vulnerabilities.
-- [x] Re-run clean and repeat Ansible deployments, load balancing/failover scenarios, and Chrome/Firefox CRUD walkthroughs on the final build.
-- [x] Prepare reviewed PR examples, naming conventions, Jenkins build/test/deploy evidence, SonarQube reports, and a package-selection explanation.
+- [ ] Convert every question in the linked audit into a local checklist with a demonstration command/action and evidence location; re-read the upstream exercise and audit for changes before final delivery.
+- [ ] Demonstrate architecture boundaries, independent deployment/scaling, gateway routing, partial-failure behavior, and cross-service tracing. Gateway trace and backend replacement probes are recorded; independent scale proof remains open.
+- [ ] Demonstrate PostgreSQL and Neo4j schemas with real stored examples and explain ownership, constraints, indexes, transactions, and cleanup rules. Local persistence evidence exists; full audit demonstration remains open.
+- [ ] Run administrator create/read/update/delete scenarios for users, travelers, travels, payment methods, gateways, and related itinerary records; include duplicate, missing, invalid, and dependency-failure cases.
+- [ ] Finish and verify the complete user-deletion workflow across auth, users, travel, and payments; retry interrupted cleanup and confirm no active credentials or orphaned owned references remain.
+- [ ] Verify unauthenticated/non-admin denial on every business endpoint, direct-service protection, least-privilege database/Vault policies, verified TLS on every network path, and private operational interfaces.
+- [ ] Inspect repository/history and logs for accidental secrets; rotate any exposed credentials and verify documented credential/certificate rotation procedures.
+- [ ] Run the full backend unit suite and UI unit/lint/build checks; review the latest PR SonarQube report for blocking errors, dependency warnings, and unresolved vulnerabilities. Backend passed; live PR report remains open.
+- [ ] Re-run clean and repeat Ansible deployments, load balancing/failover scenarios, and Chrome/Firefox CRUD walkthroughs on the final build.
+- [ ] Prepare reviewed PR examples, naming conventions, Jenkins build/test/deploy evidence, SonarQube reports, and a package-selection explanation.
 - [x] Ensure README instructions allow another developer to configure secrets, start the system, obtain the bootstrap admin, run tests, and reproduce the audit without undocumented steps.
-- [x] **Completion check:** Every mandatory audit item has a repeatable local demonstration and recorded evidence on the final build.
+- [ ] **Completion check:** Every mandatory audit item has a repeatable local demonstration and recorded evidence on the final build.
 
 ## Optional bonuses
 
@@ -366,3 +368,13 @@ Add a row whenever a phase is completed or reopened. Phase completion tracks imp
 | Phase | Status | Date | PR / commit | Verification commands or evidence | Remaining issues / reopen reason |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-11 | Working tree on `feat/phase-1-foundation`; human PR review pending | Maven verify: 23 passing tests; UI production build; four clean OpenAPI contracts; [verification details](docs/phase-1-verification.md) | Docker image execution unverified because daemon is unavailable; upstream test/runtime warnings recorded in verification notes. |
+| 3 | Reopened | 2026-10-01 | `build-security-data-fixes` | Dashboard JUnit, npm advisory, and Ansible source gates added; local checks in the [essentials follow-up](docs/audit/essentials-2026-10-01.md) passed. | Configured Jenkins/Sonar/Gitea PR gate and deliberate failure demonstration remain open. |
+| 4 | Reopened | 2026-10-01 | `build-security-data-fixes` | Auth/API smoke and token revocation passed in the [local runtime run](docs/audit/runtime-verification-2026-09-30.md). | Live TLS and Vault verification remain open. |
+| 5 | Reopened | 2026-10-01 | `build-security-data-fixes` | User lifecycle smoke passed; failed-insert compensation has focused tests in the [follow-up](docs/audit/runtime-verification-2026-10-01.md). | Durable auth/users creation coordination and the full failure/retry matrix remain open. |
+| 6 | Reopened | 2026-10-01 | `build-security-data-fixes` | Neo4j aggregate tests and runtime persistence passed. | The complete deployed graph inspection and contract alignment remain open. |
+| 7 | Reopened | 2026-10-01 | `build-security-data-fixes` | Persistence and provider adapters have code and unit checks. | Sandbox credentials and customer ownership proof are unavailable; lifecycle/API items remain open. |
+| 8 | Reopened | 2026-10-01 | `build-security-data-fixes` | Production build, limited browser smoke, and focused route, user-create, and payment-default UI tests passed. | Broader form/CRUD tests and the Chrome/Firefox responsive matrix remain open. |
+| 9 | Reopened | 2026-10-01 | `build-security-data-fixes` | Request IDs reached gateway, auth, and user logs in the [follow-up](docs/audit/runtime-verification-2026-10-01.md); source now emits process instance IDs. | Deployed instance/format check, mutation audit records, collector export/viewing, and full metric/retention proof remain open. |
+| 10 | Reopened | 2026-10-01 | `build-security-data-fixes` | Debian/Ubuntu host preparation playbook passes local syntax/lint in the [essentials follow-up](docs/audit/essentials-2026-10-01.md). | Clean/repeat/rollback target runs, other provisioning roles, and Jenkins deployment evidence remain open. |
+| 11 | Reopened | 2026-10-01 | `build-security-data-fixes` | Backend replacement with changed IPs passed with the gateway left running. | Two-replica load, balancing, outage, and database recovery demonstrations remain open. |
+| 12 | Reopened | 2026-10-01 | `build-security-data-fixes` | [Project audit](docs/audit/project-audit-2026-09-29.md) and dated local runs list completed checks. | Live CI/deployment, providers, TLS/Vault, full browser, and replica evidence remain open. |

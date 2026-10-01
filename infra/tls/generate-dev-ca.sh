@@ -19,5 +19,9 @@ cp "$output_dir/gateway.crt" "$output_dir/public.crt"
 cp "$output_dir/gateway.key" "$output_dir/private.key"
 mkdir -p "$output_dir/trusted"
 cp "$output_dir/dev-ca.crt" "$output_dir/trusted/dev-ca.crt"
-chmod 600 "$output_dir"/*.key
+mkdir -p "$output_dir/postgres" "$output_dir/vault" "$output_dir/neo4j"
+cp "$output_dir/server.crt" "$output_dir/server.key" "$output_dir/postgres/"
+cp "$output_dir/vault.crt" "$output_dir/vault.key" "$output_dir/vault/"
+cp "$output_dir/public.crt" "$output_dir/private.key" "$output_dir/neo4j/"
+chmod 600 "$output_dir"/*.key "$output_dir"/*/*.key
 echo "Generated development CA and gateway certificate in $output_dir"

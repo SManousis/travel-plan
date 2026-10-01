@@ -6,8 +6,23 @@ spring:
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8084}
+auth:
+  service-url: ${AUTH_SERVICE_URL:http://127.0.0.1:8081}
+services:
+  user:
+    url: ${USER_SERVICE_URL:http://127.0.0.1:8082}
+payments:
+  simulation:
+    enabled: ${PAYMENT_SIMULATION_ENABLED:false}
+    base-url: ${PAYMENT_SIMULATOR_BASE_URL:}
+  stripe:
+    secret-key: ${STRIPE_SANDBOX_SECRET_KEY:}
+  paypal:
+    client-id: ${PAYPAL_SANDBOX_CLIENT_ID:}
+    client-secret: ${PAYPAL_SANDBOX_CLIENT_SECRET:}
 security:
   token-secret: ${AUTH_TOKEN_SECRET:replace-with-at-least-32-random-characters}
+  internal-service-token: ${AUTH_INTERNAL_SERVICE_TOKEN:change-me-internal}
 management:
   server:
     address: ${MANAGEMENT_ADDRESS:127.0.0.1}
