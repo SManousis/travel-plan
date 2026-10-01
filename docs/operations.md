@@ -20,6 +20,18 @@ Auth migration V3 creates `auth_identities`. Older provisioned passwords existed
 
 This is a required one-time reset for upgrades from the memory-only auth implementation. There is currently no end-user password-change flow; subsequent password replacement remains an operator procedure until that feature is built.
 
+## Reconciling failed user creation
+
+User creation provisions an auth identity before inserting the user profile. If the profile insert fails, user-service now asks auth-service to disable that newly provisioned subject and revoke its sessions. The two databases still do not share a transaction. If auth-service is unavailable during compensation, an enabled identity can remain without a profile; even successful compensation leaves a disabled identity that reserves the username. A retry may therefore return a conflict until an operator reconciles the records.
+
+1. Stop user creation and logins, then back up both databases. Record the failed request ID and the provisioned subject UUID from the service error log if available. Do not record passwords or bearer tokens.
+2. Export `SELECT subject,username,role,enabled FROM auth_identities ORDER BY subject` from the auth database and `SELECT id,email,role,status FROM users ORDER BY id` from the users database. Compare the exports by `subject = id`, then check email/username, role, and enabled/status. The databases are separate, so perform the comparison outside SQL rather than assuming a cross-database join.
+3. For each auth-only subject, call the private `POST /api/auth/internal/revoke/<subject>` endpoint with the internal service token. Confirm `enabled = false` and that an existing token for the subject is rejected. Investigate any failed revoke before reopening traffic.
+4. For an auth-only subject confirmed to have no user row, back up its row and check for related sessions or external references. If the intended user must be created again, remove only that disabled orphan with `DELETE FROM auth_identities WHERE subject = :orphan_subject AND enabled = false`; record the UUID and deletion. Then retry creation through the API. Do not reuse a subject UUID or reactivate an orphan as a shortcut.
+5. For a user-only row or mismatched fields, use the credential reset and identity synchronization procedure above with the existing user UUID. Re-export both tables and confirm every active user has exactly one matching enabled identity before reopening traffic.
+
+This is an operator recovery procedure, not durable cross-database coordination. A persisted creation state and reconciliation worker are still needed to close the identity consistency gap.
+
 ## Upgrading legacy travel graph records
 
 The earlier travel-service kept stops, activities, accommodation, transport, and participants only in process memory. Its Neo4j writes contained destination and top-level travel nodes. A restart lost the itinerary fields, so the new graph repository cannot infer them from the database.

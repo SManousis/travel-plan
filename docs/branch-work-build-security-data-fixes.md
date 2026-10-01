@@ -32,14 +32,16 @@ The design and implementation plans for these changes are in [`docs/superpowers`
 
 Exact results and limitations are in the [audit follow-ups](audit/project-audit-2026-09-29.md). Migration and legacy-data procedures are in [operations](operations.md).
 
-A later [isolated runtime verification](audit/runtime-verification-2026-09-30.md) passed the complete 62-test Maven reactor, UI/API lint and build, npm audits, Compose configuration, Ansible syntax/lint, API lifecycle with persistence and cleanup, and a limited dashboard browser smoke. It also found stale gateway routing after backend-only restarts and missing downstream request-ID logs; those remain open.
+A later [isolated runtime verification](audit/runtime-verification-2026-09-30.md) passed the complete 62-test Maven reactor, UI/API lint and build, npm audits, Compose configuration, Ansible syntax/lint, API lifecycle with persistence and cleanup, and a limited dashboard browser smoke. It also found stale gateway routing after backend-only restarts and missing downstream request-ID logs, which prompted the next follow-up.
+
+The [2026-10-01 runtime follow-up](audit/runtime-verification-2026-10-01.md) fixed the gateway's routed and auth-validation DNS refresh and confirmed a backend replacement with changed container IPs while the gateway stayed up. Request IDs now reach gateway, auth, and user logs, including controlled denial logging. Failed user inserts attempt to disable the provisioned auth subject and do not reserve the local email cache. The complete Maven reactor passed 73 tests. Durable cross-database creation/reconciliation, multi-replica recovery, and live external integrations remain open.
 
 ## Remaining before the exercise audit
 
 1. Configure Jenkins, SonarQube, a CI agent, and Gitea branch protection; demonstrate that failed PR checks block merging. UI lint and source pipeline wiring exist, while dependency review and native PR Sonar analysis remain open.
 2. Configure a registry and prepared Linux target; run the SHA-tagged image release and secure Ansible deployment, then record clean, repeat, and rollback results. Vault initialization and app-side secret retrieval remain open.
 3. Finish the remaining payment lifecycle/API decisions and verify Stripe and PayPal against sandboxes. Credentials and a trusted provider-customer-to-local-user mapping are not available yet, so provider ownership proof remains deferred.
-4. Run and record deployed user-deletion/retry, authorization/TLS, database persistence, tracing, load/failover, and Chrome/Firefox dashboard scenarios. The [browser checklist](audit/browser-checks.md) remains pending.
+4. Run and record deployed user-deletion/retry, authorization/TLS, database persistence, collector tracing, load/failover, and Chrome/Firefox dashboard scenarios. The local gateway-to-service trace and backend replacement probes are recorded, while the [browser checklist](audit/browser-checks.md) remains pending.
 5. Reconcile checked phase claims and older architecture/API documentation with the implementation and dated evidence. Phase 7 payment completion and final audit readiness are not established.
 
 Optional documentation, expanded test-suite, and Kubernetes bonuses in `plan.md` are separate from the mandatory gaps above.

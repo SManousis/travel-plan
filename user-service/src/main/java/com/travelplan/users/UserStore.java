@@ -11,9 +11,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class UserStore {
+    private static final Logger log = LoggerFactory.getLogger(UserStore.class);
     private final Map<UUID, UserDomain.User> users = new ConcurrentHashMap<>();
     private final Map<UUID, UserDomain.Traveler> travelers = new ConcurrentHashMap<>();
     private final Map<String, Object> idempotent = new ConcurrentHashMap<>();
@@ -41,7 +44,23 @@ public class UserStore {
         if (users.values().stream().anyMatch(u -> u.email().equalsIgnoreCase(email))) throw new Conflict("EMAIL_EXISTS");
         UserDomain.User user = new UserDomain.User(UUID.randomUUID(), email.toLowerCase(Locale.ROOT), first, last, role, UserDomain.Status.ACTIVE, Instant.now());
         try { provisioning.provision(user.id(), user.email(), UUID.randomUUID().toString()+"-Initial9!", user.role().name()); } catch (RuntimeException ex) { throw new Conflict("AUTH_PROVISIONING_FAILED"); }
-        users.put(user.id(), user); if (jdbc != null) jdbc.update("insert into users(id,email,first_name,last_name,role,status,created_at) values (?,?,?,?,?,?,?)",user.id(),user.email(),user.firstName(),user.lastName(),user.role().name(),user.status().name(),Timestamp.from(user.createdAt())); return user;
+        if (jdbc != null) {
+            try {
+                jdbc.update("insert into users(id,email,first_name,last_name,role,status,created_at) values (?,?,?,?,?,?,?)",
+                        user.id(), user.email(), user.firstName(), user.lastName(), user.role().name(),
+                        user.status().name(), Timestamp.from(user.createdAt()));
+            } catch (RuntimeException insertFailure) {
+                try {
+                    revocations.revoke(user.id());
+                } catch (RuntimeException revokeFailure) {
+                    insertFailure.addSuppressed(revokeFailure);
+                    log.error("Failed to disable provisioned auth identity {} after user insert failure", user.id(), revokeFailure);
+                }
+                throw insertFailure;
+            }
+        }
+        users.put(user.id(), user);
+        return user;
     }
     public List<UserDomain.User> list() {
         if (jdbc != null) return jdbc.query("select id,email,first_name,last_name,role,status,created_at "

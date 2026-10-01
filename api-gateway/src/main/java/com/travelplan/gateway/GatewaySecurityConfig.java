@@ -7,6 +7,9 @@ import java.time.Duration;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.beans.factory.annotation.Qualifier;
+import reactor.netty.http.client.HttpClient;
 import reactor.core.publisher.Mono;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -28,10 +31,12 @@ public class GatewaySecurityConfig {
     @Bean
     WebFilter adminTokenFilter(@Value("${security.token-secret:replace-with-at-least-32-random-characters}") String secret,
             @Value("${auth.service-url:http://127.0.0.1:8081}") String authUrl,
-            @Value("${security.internal-service-token:change-me-internal}") String internalToken) {
+            @Value("${security.internal-service-token:change-me-internal}") String internalToken,
+            @Qualifier("authValidationHttpClient") HttpClient authValidationHttpClient) {
         if (secret.length() < 32) throw new IllegalArgumentException("security.token-secret must contain at least 32 characters");
         byte[] key = secret.getBytes(StandardCharsets.UTF_8);
-        WebClient client = WebClient.builder().baseUrl(authUrl).build();
+        WebClient client = WebClient.builder().baseUrl(authUrl)
+                .clientConnector(new ReactorClientHttpConnector(authValidationHttpClient)).build();
         return (exchange, chain) -> {
             String path = exchange.getRequest().getPath().value();
             if (!path.startsWith("/api/") || path.equals("/api/auth/login") || path.equals("/api/auth/refresh")) return chain.filter(exchange);
@@ -41,6 +46,10 @@ public class GatewaySecurityConfig {
             return client.post().uri("/internal/token-validation")
                     .header("Authorization", exchange.getRequest().getHeaders().getFirst("Authorization"))
                     .header("X-Internal-Service-Token", internalToken)
+                    .headers(headers -> {
+                        String requestId = exchange.getRequest().getHeaders().getFirst("X-Request-ID");
+                        if (requestId != null) headers.set("X-Request-ID", requestId);
+                    })
                     .exchangeToMono(response -> {
                         int status = response.statusCode().value();
                         if (status == 200) return Mono.just(ValidationResult.ACTIVE);
