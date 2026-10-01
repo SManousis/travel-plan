@@ -106,10 +106,14 @@ pipeline {
         withCredentials([
           usernamePassword(credentialsId: 'travel-plan-registry',
             usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD'),
-          sshUserPrivateKey(credentialsId: 'travel-plan-deploy-ssh', keyFileVariable: 'DEPLOY_SSH_KEY')
+          sshUserPrivateKey(credentialsId: 'travel-plan-deploy-ssh', keyFileVariable: 'DEPLOY_SSH_KEY'),
+          file(credentialsId: 'travel-plan-release-env', variable: 'RELEASE_ENV_FILE')
         ]) {
           sh '''
             set -eu
+            set -a
+            . "$RELEASE_ENV_FILE"
+            set +a
             ansible-playbook -i "$DEPLOY_INVENTORY" --private-key "$DEPLOY_SSH_KEY" infra/ansible/deploy.yml \
               -e "release_tag=$RELEASE_TAG" \
               -e "image_prefix=$IMAGE_PREFIX" \

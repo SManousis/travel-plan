@@ -30,8 +30,8 @@ unless a step says PowerShell.
 bash scripts/ci/init-secrets.sh
 ```
 
-This creates `.env.ci-agent` and `.ci-secrets/` (deploy SSH key, registry password). Both are
-ignored by Git; never commit them.
+This creates `.env.ci-agent` and `.ci-secrets/` (deploy SSH key, registry password, and
+`release.env` with the application secrets). Both are ignored by Git; never commit them.
 
 ## 3. Start Jenkins and SonarQube
 
@@ -62,6 +62,7 @@ docker compose -f infra/compose/compose.ci.yml up -d
    | `gitea-token` | Gitea Personal Access Token | Gitea **Settings → Applications**: permissions *repository: Read and Write*, *user: Read*. Do **not** tick "public only". |
    | `travel-plan-registry` | Username with password | user `jenkins`, password from `.ci-secrets/registry-password.txt` |
    | `travel-plan-deploy-ssh` | SSH Username with private key | user `deploy`, key = whole contents of `.ci-secrets/deploy_ed25519` |
+   | `travel-plan-release-env` | Secret file | upload `.ci-secrets/release.env` (only the deploy stage reads it) |
 
 5. **Manage Jenkins → System**:
    - **SonarQube servers**: tick *Environment variables*, add name `travel-plan-sonarqube`,

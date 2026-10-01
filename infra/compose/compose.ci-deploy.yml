@@ -36,16 +36,9 @@ services:
   pr-agent:
     environment:
       # Image builds and pushes run on the deployment host's engine.
+      # Release secrets are not set here: service tests read the same variable names.
+      # The deploy stage loads them from the travel-plan-release-env Jenkins credential.
       DOCKER_HOST: tcp://deploy-host:2375
-      POSTGRES_SUPERUSER_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?Set in .env.ci-agent}
-      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?Set in .env.ci-agent}
-      USERS_DB_PASSWORD: ${USERS_DB_PASSWORD:?Set in .env.ci-agent}
-      PAYMENTS_DB_PASSWORD: ${PAYMENTS_DB_PASSWORD:?Set in .env.ci-agent}
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set in .env.ci-agent}
-      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?Set in .env.ci-agent}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set in .env.ci-agent}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set in .env.ci-agent}
-      AUTH_INTERNAL_SERVICE_TOKEN: ${AUTH_INTERNAL_SERVICE_TOKEN:?Set in .env.ci-agent}
     depends_on:
       - deploy-host
 

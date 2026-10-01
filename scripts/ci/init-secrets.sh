@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Creates the ignored local CI secrets: .ci-secrets/ (deploy SSH key, registry password)
-# and .env.ci-agent (compose values). Run once from the repository root in Git Bash.
+# Creates the ignored local CI secrets: .ci-secrets/ (deploy SSH key, registry password,
+# release.env for the Jenkins deploy stage) and .env.ci-agent (compose values).
+# Run once from the repository root in Git Bash.
 set -euo pipefail
 
 if [ -e .env.ci-agent ] || [ -e .ci-secrets ]; then
@@ -20,6 +21,10 @@ cat > .env.ci-agent <<EOF
 JENKINS_AGENT_SECRET=
 DEPLOY_AUTHORIZED_KEY='$(cat .ci-secrets/deploy_ed25519.pub)'
 REGISTRY_HTPASSWD='$registry_hash'
+EOF
+
+# Uploaded to Jenkins as the travel-plan-release-env Secret file; read only by the deploy stage.
+cat > .ci-secrets/release.env <<EOF
 POSTGRES_SUPERUSER_PASSWORD=$(random 16)
 AUTH_DB_PASSWORD=$(random 16)
 USERS_DB_PASSWORD=$(random 16)

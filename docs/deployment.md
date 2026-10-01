@@ -20,7 +20,7 @@ docker compose --env-file .env.ci-agent -f infra/compose/compose.ci.yml \
   -f infra/compose/compose.ci-agent.yml -f infra/compose/compose.ci-deploy.yml up -d
 ```
 
-`.env.ci-agent` (ignored) holds the agent secret, `DEPLOY_AUTHORIZED_KEY`, `REGISTRY_HTPASSWD`, and the release secrets listed above. Before the first deploy, provision certificates on the target with `docker exec -i travel-plan-ci-deploy-host-1 bash -s /opt/travel-plan/tls/certs < infra/tls/generate-dev-ca.sh`. In Jenkins, set `REGISTRY_HOST=registry:5000`, `IMAGE_PREFIX=registry:5000/travel-plan`, and `DEPLOY_INVENTORY=infra/ansible/inventory.ci.ini`, and add the `travel-plan-registry` username/password and `travel-plan-deploy-ssh` (user `deploy`, private key) credentials.
+`.env.ci-agent` (ignored) holds the agent secret, `DEPLOY_AUTHORIZED_KEY`, and `REGISTRY_HTPASSWD`. The release secrets listed above go in a `travel-plan-release-env` Jenkins Secret file that only the deploy stage loads; they must not be set in the agent environment because service tests read the same variable names. Before the first deploy, provision certificates on the target with `docker exec -i travel-plan-ci-deploy-host-1 bash -s /opt/travel-plan/tls/certs < infra/tls/generate-dev-ca.sh`. In Jenkins, set `REGISTRY_HOST=registry:5000`, `IMAGE_PREFIX=registry:5000/travel-plan`, and `DEPLOY_INVENTORY=infra/ansible/inventory.ci.ini`, and add the `travel-plan-registry` username/password, `travel-plan-deploy-ssh` (user `deploy`, private key), and `travel-plan-release-env` (Secret file) credentials.
 
 ## Target preparation
 
