@@ -7,8 +7,9 @@ services:
     init: true
     restart: unless-stopped
     command:
-      - -direct
-      - jenkins:50000
+      - -url
+      - http://jenkins:8080/
+      - -webSocket
       - -secret
       - ${JENKINS_AGENT_SECRET:?Set JENKINS_AGENT_SECRET in .env.ci-agent}
       - -name

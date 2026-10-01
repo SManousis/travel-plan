@@ -21,7 +21,6 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && chmod -R a+rX /opt/ansible /opt/sonar-scanner
 
 ENV PATH="/opt/sonar-scanner/bin:/opt/ansible/bin:${PATH}" \
-    ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections \
-    ANSIBLE_COLLECTIONS_PATHS=/opt/ansible/collections
+    ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections
 
 USER jenkins

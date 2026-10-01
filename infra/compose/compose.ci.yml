@@ -10,6 +10,9 @@ services:
   sonarqube:
     image: sonarqube:lts-community
     restart: unless-stopped
+    environment:
+      # Disables Elasticsearch mmap so Docker Desktop's default vm.max_map_count is enough.
+      SONAR_SEARCH_JAVAADDITIONALOPTS: "-Dnode.store.allow_mmap=false"
     ports: ["127.0.0.1:9000:9000"]
     volumes: [sonarqube-data:/opt/sonarqube/data, sonarqube-extensions:/opt/sonarqube/extensions]
 volumes:
