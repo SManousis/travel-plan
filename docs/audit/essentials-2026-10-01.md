@@ -26,3 +26,5 @@ Branch: `build-security-data-fixes`. This records local checks on the unmerged b
 ## Still open
 
 The repository checks do not establish a live Jenkins/Gitea quality gate, SonarQube report, registry publication, or clean/repeat/rollback deployment. A configured agent, registry, TLS files, protected secrets, and Linux target are required for those checks. The payment default database path has local migration and API evidence, but no automated PostgreSQL transaction test in CI. Real Stripe/PayPal sandbox verification and provider ownership proof remain deferred until credentials and a trusted user-to-provider mapping exist. User creation still needs durable cross-database reconciliation. Collector export/viewing, full browser coverage, mutation audit records, and replica/failure evidence remain open.
+
+The branch push was accepted and `git ls-remote` matched the local commit, but Gitea printed a nonblocking `fatal: ambiguous argument` message for its remote diff calculation. Inspect that server-side hook while configuring PR checks; this local push result does not prove PR status reporting works.
