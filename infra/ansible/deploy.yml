@@ -15,6 +15,11 @@
       - public.crt
       - private.key
       - trusted/dev-ca.crt
+    # Image users: postgres 999:999, vault 100:1000, neo4j 7474:7474.
+    service_tls:
+      - { dir: postgres, uid: 999, gid: 999, files: [server.crt, server.key] }
+      - { dir: vault, uid: 100, gid: 1000, files: [vault.crt, vault.key] }
+      - { dir: neo4j, uid: 7474, gid: 7474, files: [public.crt, private.key] }
     release_secrets:
       POSTGRES_SUPERUSER_PASSWORD: "{{ postgres_superuser_password | default(lookup('ansible.builtin.env', 'POSTGRES_SUPERUSER_PASSWORD'), true) }}"
       AUTH_DB_PASSWORD: "{{ auth_db_password | default(lookup('ansible.builtin.env', 'AUTH_DB_PASSWORD'), true) }}"
@@ -87,6 +92,29 @@
         fail_msg: "Provision {{ item.item }} under {{ app_dir }}/tls/certs before deploying."
       loop: "{{ tls_files.results }}"
 
+    - name: Create service-owned TLS directories
+      ansible.builtin.file:
+        path: "{{ app_dir }}/tls/certs/{{ item.dir }}"
+        state: directory
+        owner: "{{ item.uid }}"
+        group: "{{ item.gid }}"
+        mode: '0700'
+      loop: "{{ service_tls }}"
+      loop_control:
+        label: "{{ item.dir }}"
+
+    - name: Copy service-owned TLS material
+      ansible.builtin.copy:
+        src: "{{ app_dir }}/tls/certs/{{ item.1 }}"
+        dest: "{{ app_dir }}/tls/certs/{{ item.0.dir }}/{{ item.1 }}"
+        remote_src: true
+        owner: "{{ item.0.uid }}"
+        group: "{{ item.0.gid }}"
+        mode: '0600'
+      loop: "{{ service_tls | subelements('files') }}"
+      loop_control:
+        label: "{{ item.0.dir }}/{{ item.1 }}"
+
     - name: Create release directories
       ansible.builtin.file:
         path: "{{ app_dir }}/{{ item }}"
@@ -145,13 +173,15 @@
 
     - name: Pull and reconcile the exact published release
       community.docker.docker_compose_v2:
-        project_src: "{{ app_dir }}"
+        # Relative bind mounts in the manifests (../tls/certs, ../proxy, ...) resolve
+        # against the project directory, so it must be the compose directory itself.
+        project_src: "{{ app_dir }}/compose"
         files:
-          - compose/compose.yml
-          - compose/compose.release.yml
-          - compose/compose.secure.yml
+          - compose.yml
+          - compose.release.yml
+          - compose.secure.yml
         env_files:
-          - .env
+          - "{{ app_dir }}/.env"
         state: present
         pull: always
         build: never

@@ -1,0 +1,55 @@
+# Local release path for the main pipeline: a private registry and an SSH-reachable
+# deployment host with its own Docker engine. Apply after compose.ci.yml and
+# compose.ci-agent.yml; values come from the ignored .env.ci-agent file.
+services:
+  registry:
+    image: registry:2.8.3
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - printf '%s\n' "$$REGISTRY_HTPASSWD" > /etc/docker/registry/htpasswd && exec registry serve /etc/docker/registry/config.yml
+    environment:
+      REGISTRY_HTPASSWD: ${REGISTRY_HTPASSWD:?Set REGISTRY_HTPASSWD in .env.ci-agent}
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: travel-plan
+      REGISTRY_AUTH_HTPASSWD_PATH: /etc/docker/registry/htpasswd
+    volumes:
+      - registry-data:/var/lib/registry
+
+  deploy-host:
+    image: travel-plan-deploy-host:local
+    build:
+      context: ../ci-deploy
+    privileged: true
+    restart: unless-stopped
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+      DEPLOY_AUTHORIZED_KEY: ${DEPLOY_AUTHORIZED_KEY:?Set DEPLOY_AUTHORIZED_KEY in .env.ci-agent}
+    depends_on:
+      - registry
+    ports:
+      - 127.0.0.1:8443:8443
+    volumes:
+      - deploy-host-docker:/var/lib/docker
+      - deploy-host-app:/opt/travel-plan
+
+  pr-agent:
+    environment:
+      # Image builds and pushes run on the deployment host's engine.
+      DOCKER_HOST: tcp://deploy-host:2375
+      POSTGRES_SUPERUSER_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?Set in .env.ci-agent}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?Set in .env.ci-agent}
+      USERS_DB_PASSWORD: ${USERS_DB_PASSWORD:?Set in .env.ci-agent}
+      PAYMENTS_DB_PASSWORD: ${PAYMENTS_DB_PASSWORD:?Set in .env.ci-agent}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set in .env.ci-agent}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?Set in .env.ci-agent}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set in .env.ci-agent}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set in .env.ci-agent}
+      AUTH_INTERNAL_SERVICE_TOKEN: ${AUTH_INTERNAL_SERVICE_TOKEN:?Set in .env.ci-agent}
+    depends_on:
+      - deploy-host
+
+volumes:
+  registry-data:
+  deploy-host-docker:
+  deploy-host-app:

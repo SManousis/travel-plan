@@ -103,11 +103,14 @@ pipeline {
             error('DEPLOY_INVENTORY must select a reviewed target for main builds')
           }
         }
-        withCredentials([usernamePassword(credentialsId: 'travel-plan-registry',
-          usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD')]) {
+        withCredentials([
+          usernamePassword(credentialsId: 'travel-plan-registry',
+            usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD'),
+          sshUserPrivateKey(credentialsId: 'travel-plan-deploy-ssh', keyFileVariable: 'DEPLOY_SSH_KEY')
+        ]) {
           sh '''
             set -eu
-            ansible-playbook -i "$DEPLOY_INVENTORY" infra/ansible/deploy.yml \
+            ansible-playbook -i "$DEPLOY_INVENTORY" --private-key "$DEPLOY_SSH_KEY" infra/ansible/deploy.yml \
               -e "release_tag=$RELEASE_TAG" \
               -e "image_prefix=$IMAGE_PREFIX" \
               -e "registry_host=$REGISTRY_HOST"

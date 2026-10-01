@@ -11,6 +11,17 @@
 - Supply `POSTGRES_SUPERUSER_PASSWORD`, `AUTH_DB_PASSWORD`, `USERS_DB_PASSWORD`, `PAYMENTS_DB_PASSWORD`, `NEO4J_PASSWORD`, `AUTH_TOKEN_SECRET` (at least 32 characters), `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `AUTH_INTERNAL_SERVICE_TOKEN` as protected Jenkins environment values or Ansible variables. Optional sandbox values are `STRIPE_SANDBOX_SECRET_KEY`, `PAYPAL_SANDBOX_CLIENT_ID`, and `PAYPAL_SANDBOX_CLIENT_SECRET`. The playbook rejects missing and known placeholder required values and writes `/opt/travel-plan/.env` with mode `0600`.
 - Configure separate Jenkins jobs for pull request validation and the `main` release. The PR job runs Maven, API lint, UI lint/build, Sonar analysis, and the quality gate; the `main` job additionally runs the release stages. SonarQube Community Build in `compose.ci.yml` keeps a single branch per project, so each PR analysis replaces the latest `travel-plan` snapshot; the gate result Jenkins waits on still belongs to that build. Require the PR job status in Gitea branch protection. Native PR Sonar analysis and decoration need a licensed SonarQube edition.
 
+## Local release target
+
+`infra/compose/compose.ci-deploy.yml` adds a private registry (`registry:5000`, htpasswd login) and `deploy-host`, an SSH-reachable container with its own Docker engine. The agent builds and pushes images through that engine, and Ansible deploys to it with `infra/ansible/inventory.ci.ini`; the dashboard is then served at `https://localhost:8443`. Start it with the other CI services:
+
+```sh
+docker compose --env-file .env.ci-agent -f infra/compose/compose.ci.yml \
+  -f infra/compose/compose.ci-agent.yml -f infra/compose/compose.ci-deploy.yml up -d
+```
+
+`.env.ci-agent` (ignored) holds the agent secret, `DEPLOY_AUTHORIZED_KEY`, `REGISTRY_HTPASSWD`, and the release secrets listed above. Before the first deploy, provision certificates on the target with `docker exec -i travel-plan-ci-deploy-host-1 bash -s /opt/travel-plan/tls/certs < infra/tls/generate-dev-ca.sh`. In Jenkins, set `REGISTRY_HOST=registry:5000`, `IMAGE_PREFIX=registry:5000/travel-plan`, and `DEPLOY_INVENTORY=infra/ansible/inventory.ci.ini`, and add the `travel-plan-registry` username/password and `travel-plan-deploy-ssh` (user `deploy`, private key) credentials.
+
 ## Target preparation
 
 For a fresh Debian or Ubuntu release host, run `infra/ansible/site.yml` with the same inventory, release variables, and protected environment values used by `deploy.yml`. It runs `prepare.yml` first, which installs Docker Engine and the Compose plugin from [Docker's official apt repository](https://docs.docker.com/engine/install/ubuntu/), the Python `requests` package needed by registry login, starts Docker, and creates `/opt/travel-plan`. It refuses to remove conflicting distribution Docker packages automatically; migrate those hosts using Docker's installation procedure. `deploy.yml` remains the repeat-release entry point for Jenkins on an already prepared host. Other distributions need a separately reviewed preparation role.
